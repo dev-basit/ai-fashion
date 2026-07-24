@@ -37,7 +37,7 @@ def get_vector_store() -> PGVector:
     return PGVector(
         embeddings=get_embeddings(),
         collection_name=_COLLECTION,
-        connection=settings.DATABASE_URL,
+        connection=str(settings.DATABASE_URL),
         use_jsonb=True,
     )
 

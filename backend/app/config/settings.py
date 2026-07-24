@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     IS_LLM_LIMIT: bool = True
     LLM_REQUESTS_PER_DAY: int = 100
 
-    DATABASE_URL: str
+    DATABASE_URL: SecretStr
 
     JWT_SECRET_KEY: SecretStr
     JWT_ALGORITHM: str = "HS256"
