@@ -32,23 +32,24 @@ supabase db reset && npm run seed
 
 ## Tech Stack
 
-| Layer         | Library                                               | Version                                                                 |
-| ------------- | ----------------------------------------------------- | ----------------------------------------------------------------------- |
-| Framework     | Next.js                                               | 16.2.11                                                                 |
-| Runtime       | React                                                 | 19.2.4                                                                  |
-| Language      | TypeScript                                            | ^5 (strict)                                                             |
-| Database      | Supabase (PostgreSQL + RLS + Realtime)                | @supabase/supabase-js ^2                                                |
-| Styling       | Tailwind CSS                                          | ^4                                                                      |
-| UI components | shadcn **base-nova** style (Base UI `@base-ui/react`) | ^1.7                                                                    |
-| State         | Zustand ^5                                            | persisted stores                                                        |
-| Forms         | react-hook-form ^7 + zod ^4                           | `z` from `zod/v4`                                                       |
-| Charts        | Recharts ^3                                           |                                                                         |
-| Calendar      | FullCalendar **v6**                                   | `@fullcalendar/{react,core,daygrid,timegrid,interaction}` all `^6.1.21` |
-| Date picker   | react-day-picker (via `calendar.tsx`)                 | wrapped in `date-picker.tsx`                                            |
-| Theme         | next-themes ^0.4                                      | attribute="class", default="light"                                      |
-| Icons         | lucide-react ^1.31                                    |                                                                         |
-| HTTP          | axios ^1                                              | via `src/services/http.ts`                                              |
-| AI / LLM      | `@langchain/openai` ^1 + `@langchain/langgraph` ^1   | RAG pipeline + streaming agent                                          |
+| Layer         | Library                                               | Version                                                                     |
+| ------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
+| Framework     | Next.js                                               | 16.2.11                                                                     |
+| Runtime       | React                                                 | 19.2.4                                                                      |
+| Language      | TypeScript                                            | ^5 (strict)                                                                 |
+| Database      | Supabase (PostgreSQL + RLS + Realtime)                | @supabase/supabase-js ^2                                                    |
+| Styling       | Tailwind CSS                                          | ^4                                                                          |
+| UI components | shadcn **base-nova** style (Base UI `@base-ui/react`) | ^1.7                                                                        |
+| Server State  | TanStack Query (`@tanstack/react-query`) ^5           | hooks in `src/hooks/` — `useQuery`/`useMutation`                            |
+| Client State  | Zustand ^5                                            | persisted stores (`auth`, `cart`, `ui`, `chat`, `appointments`)             |
+| Forms         | react-hook-form ^7 + zod ^4                           | `z` from `zod/v4`                                                           |
+| Charts        | Recharts ^3                                           |                                                                             |
+| Calendar      | FullCalendar **v6**                                   | `@fullcalendar/{react,core,daygrid,timegrid,interaction}` all `^6.1.21`     |
+| Date picker   | react-day-picker (via `calendar.tsx`)                 | wrapped in `date-picker.tsx`                                                |
+| Theme         | next-themes ^0.4                                      | attribute="class", default="light"                                          |
+| Icons         | lucide-react ^1.31                                    |                                                                             |
+| HTTP          | axios ^1                                              | `src/services/http.ts` — baseURL `/api`, Bearer token injected from session |
+| AI / LLM      | `@langchain/openai` ^1 + `@langchain/langgraph` ^1    | RAG pipeline + streaming agent                                              |
 
 ---
 
@@ -91,23 +92,29 @@ src/
     constants.ts         # APP_NAME, ROUTES, ROLES, status labels/colors
     env.ts               # Typed env access — always import from here, never process.env directly
     ai.ts                # SUGGESTED_QUESTIONS for the AI assistant UI
-  hooks/                 # useRole, useAuth, useAppointments, useClients, useChat, etc.
+    query.ts             # TanStack Query: queryClient defaults + QK key factory (single source of truth for all query keys)
+  hooks/                 # TanStack Query hooks — one file per domain (useAppointments, useClients, useChat, etc.)
+                         # All hooks call service functions internally; components never import services directly
   lib/
-    utils.ts             # cn() — clsx + tailwind-merge
+    utils.ts             # cn(), responseData(), responseError(), relativeTime(), toAIChatMessage()
     notify.ts            # notifyUserAndAdmins() / notifyAdmins() — server-only notification helpers (use getAdminClient)
+    api-handlers.ts      # withAuth / withAdmin — route handler wrappers (resolve user + build RLS-scoped supabase client)
   providers/
-    index.tsx            # <ThemeProvider> → <ThemePickerModal> → <AuthProvider>
+    index.tsx            # <QueryProvider> → <ThemeProvider> → <ThemePickerModal> → <AuthProvider>
+    QueryProvider.tsx    # <QueryClientProvider client={queryClient}> — wraps the whole app
     AuthProvider.tsx     # Calls useAuthStore.initialize() on mount
     ThemeProvider.tsx    # next-themes wrapper (attribute="class", defaultTheme="light")
   proxy.ts               # Auth/role guard — used as Next.js middleware (see below)
   scripts/
     seed.ts              # DB seed script
   services/
-    supabase.ts          # getBrowserClient() — client components only
-    supabase-server.ts   # getServerClient() / getAdminClient() — server only
-    supabase-admin.ts    # getAdminClient() (service-role, bypasses RLS) — server only
-    *.service.ts         # Domain services (all use getBrowserClient)
+    supabase.ts          # getBrowserClient() — singleton browser Supabase client (client components + http.ts auth)
+    supabase-server.ts   # getServerClient() — cookie-based server client for server components / resolveAuth
+    supabase-admin.ts    # getAdminClient() — service-role singleton, bypasses RLS, auth.admin APIs (server only)
+    http.ts              # Axios instance (baseURL: /api) — attaches Bearer token from current session on every request
+    *.service.ts         # Thin HTTP clients — call API routes via http.ts, return { data, error } via responseData/responseError
     ai.service.ts        # matchDocuments() — cosine similarity search against document_chunks via getAdminClient
+    ai-conversations.service.ts  # getBrowserClient() direct — AI conversation history (no API route; only service still using Supabase directly)
   store/
     auth.store.ts        # Zustand auth store (persisted: profile only)
     cart.store.ts        # Zustand cart (persisted)
@@ -151,11 +158,15 @@ supabase/
 
 Three clients — use the right one or you'll break auth/RLS:
 
-| Client               | Import                                                      | Use in                                                          |
-| -------------------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
-| `getBrowserClient()` | `@/services/supabase`                                       | Client components (`'use client'`), all `*.service.ts` files    |
-| `getServerClient()`  | `@/services/supabase-server`                                | Server components, route handlers (respects session cookies)    |
-| `getAdminClient()`   | `@/services/supabase-server` or `@/services/supabase-admin` | Server-only, bypasses RLS — admin user creation, privileged ops |
+| Client               | Import                       | Use in                                                                                                 |
+| -------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `getBrowserClient()` | `@/services/supabase`        | Client components only — Realtime subscriptions (`useRealtime`), `http.ts` auth header                 |
+| `getServerClient()`  | `@/services/supabase-server` | Server components (reads session cookies). Also used inside `resolveAuth` for cookie-based requests    |
+| `getAdminClient()`   | `@/services/supabase-admin`  | Route handlers only — bypasses RLS; required for `auth.admin.*` APIs (user creation) and notifications |
+
+**Route handlers receive a pre-built `supabase` client from `withAuth`/`withAdmin`** — use that, don't call `getServerClient()` again inside a handler.
+
+**`withAuth` supabase client** is a JWT-scoped `createClient` (not `getServerClient`): it uses the user's Bearer token as `Authorization` header so RLS applies as that user. This works for both browser requests (cookie → token via `resolveAuth`) and server-to-server calls (direct Bearer token).
 
 **Never import `supabase-server` or `supabase-admin` into a client component.**
 
@@ -288,21 +299,109 @@ All three dashboard components (`AdminDashboard`, `StaffDashboard`, `CustomerDas
 - `reportsService.getDashboardStats(range: DateRange)` now requires a `DateRange` argument (no default today range)
 
 ```tsx
-import {
-  DateRangeFilter,
-  computeDateRange,
-  PRESET_RANGE_LABEL,
-} from "@/components/dashboard/DateRangeFilter";
+import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "@/components/dashboard/DateRangeFilter";
 import type { DatePreset } from "@/components/dashboard/DateRangeFilter";
 ```
 
 ---
 
-## Domain Services
+## Data Fetching — TanStack Query
 
-All services in `src/services/*.service.ts` use `getBrowserClient()` and return the raw Supabase query result (`{ data, error }`). Call them from client components or hooks.
+**Components must never import services directly.** All data fetching goes through hooks in `src/hooks/`.
 
-Key services: `appointmentsService`, `clientsService`, `servicesService`, `staffService`, `consultationService`, `treatmentPlansService`, `productsService`, `ordersService`, `chatService`, `reportsService`, `settingsService`, `notificationsService`.
+### Hook pattern
+
+```ts
+// src/hooks/useClients.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QK } from "@/config/query";
+import { clientsService } from "@/services/clients.service";
+
+export function useClients(search?: string) {
+  return useQuery({
+    queryKey: QK.clients(search),
+    queryFn: async () => {
+      const { data, error } = await clientsService.getAll(search);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
+}
+
+export function useCreateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload) =>
+      fetch("/api/clients", { method: "POST", body: JSON.stringify(payload) }).then((r) => r.json()),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.clients() }),
+  });
+}
+```
+
+### Query key factory (`QK`) — `src/config/query.ts`
+
+All query keys live here. Always use `QK.*` — never write raw string arrays.
+
+```ts
+QK.appointments(filters?)  QK.appointment(id)
+QK.clients(search?)        QK.client(id)     QK.clientCounts()
+QK.staff(filters?)         QK.staffById(id)
+QK.services(catId?)        QK.service(id)    QK.serviceCategories()
+QK.products(filters?)      QK.product(id)    QK.productCategories()
+QK.orders(filters?)
+QK.consultation.templates()  QK.consultation.records(filters?)  QK.consultation.record(id)
+QK.treatmentPlans.templates()  QK.treatmentPlans.client(filters?)
+QK.reports(type, from, to)
+QK.settings(key?)
+QK.profiles()  QK.profile(id)
+QK.chatConversations()  QK.chatMessages(convId)  QK.chatRecipients()
+```
+
+### QueryClient defaults — `src/config/query.ts`
+
+```ts
+staleTime: 2 min  |  gcTime: 10 min  |  retry: 1  |  refetchOnWindowFocus: false
+```
+
+### Hook files
+
+| File                   | Key exports                                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useAppointments.ts`   | `useAppointments`, `useAppointment`, `useCreateAppointment`, `useUpdateAppointmentStatus`, `useUpdatePaymentStatus`, `useDeleteAppointment`, `useAppointmentProducts`, `useAddAppointmentProduct`, `useRemoveAppointmentProduct`                              |
+| `useClients.ts`        | `useClients`, `useClient`, `useClientHistory`, `useClientAppointmentCounts`, `useCreateClient`, `useUpdateClient`, `useDeactivateClient`                                                                                                                      |
+| `useStaff.ts`          | `useStaff`, `useStaffMember`, `useStaffByProfile`, `useStaffSchedule`, `useStaffLeaves`, `useCreateStaff`, `useUpdateStaff`, `useUpsertSchedule`, `useCreateLeave`, `useAssignService`, `useRemoveService`, `useSetAvailability`, `useDeactivateStaffProfile` |
+| `useServices.ts`       | `useServices`, `useService`, `useServiceCategories`, `useServiceVariants`, `useCreateService`, `useUpdateService`, `useDeleteService`, `useCreateServiceCategory`, `useCreateServiceVariant`, `useDeleteServiceVariant`                                       |
+| `useProducts.ts`       | `useProducts`, `useProduct`, `useProductCategories`, `useLowStockProducts`, `useCreateProduct`, `useUpdateProduct`, `useDeleteProduct`, `useUpdateProductStock`                                                                                               |
+| `useOrders.ts`         | `useOrders`, `useCreateOrder`, `useUpdateOrderStatus`                                                                                                                                                                                                         |
+| `useConsultation.ts`   | `useConsultationTemplates`, `useConsultationRecords`, `useConsultationRecord`, `useCreateConsultationRecord`, `useUpdateConsultationRecord`, `useCreateConsultationTemplate`, `useUpdateConsultationTemplate`                                                 |
+| `useTreatmentPlans.ts` | `useTreatmentPlanTemplates`, `useClientTreatmentPlans`, `useClientTreatmentPlan`, `useCreateTreatmentPlanTemplate`, `useUpdateTreatmentPlanTemplate`, `useCreateClientTreatmentPlan`, `useUpdateClientTreatmentPlan`                                          |
+| `useReports.ts`        | `useRevenueReport`, `useAppointmentReport`, `useClientReport`, `useStaffReport`, `useOrderReport`, `useProductSalesReport`, `useDashboardStats`                                                                                                               |
+| `useSettings.ts`       | `useSetting(key)`, `useUpdateSetting`                                                                                                                                                                                                                         |
+| `useProfiles.ts`       | `useAllProfiles`, `useProfile`, `useUpdateProfile`                                                                                                                                                                                                            |
+| `useChat.ts`           | `useConversations`, `useMessages`, `useSendMessage`, `useMarkRead`, `useChatRecipients`                                                                                                                                                                       |
+| `useNotifications.ts`  | `useNotifications`, `useUnreadCount`, `useMarkNotificationRead`, `useMarkAllRead`                                                                                                                                                                             |
+
+**Exception**: `src/components/ai/AssistantChat.tsx` directly imports `aiConversationsService` — the AI conversation history service has no API route and no hook. This is the only permitted direct service import in a component.
+
+### Full request chain
+
+```
+Component
+  → TanStack Query hook (useQuery / useMutation)
+      → service function  (src/services/*.service.ts)
+          → http.ts (axios, baseURL: /api, Bearer token injected)
+              → API route handler (src/app/api/...)
+                  → withAuth / withAdmin (resolves user, builds RLS-scoped supabase client)
+                      → supabase query (runs as authenticated user, RLS enforced)
+                          ─ OR ─
+                      → getAdminClient() for privileged ops (user creation, notifications)
+```
+
+### Service layer
+
+Services in `src/services/*.service.ts` are **thin HTTP clients** — they call API routes via `http.ts` (axios) and return `{ data, error }` using `responseData`/`responseError` from `@/lib/utils`. They do **not** import or use Supabase directly (with one exception: `ai-conversations.service.ts`).
+
+Called only from hooks (`queryFn`/`mutationFn`). **Never call services from components.**
 
 **`appointmentsService.getAll(filters?)`** supports `{ clientId, staffProfileId, serviceId, status, dateFrom, dateTo }`.
 
@@ -310,9 +409,56 @@ Key services: `appointmentsService`, `clientsService`, `servicesService`, `staff
 
 **Revenue includes both appointment and order revenue.** The dashboard shows a single Revenue card with Total / Appointments / Products breakdown.
 
+### Route handlers — `withAuth` / `withAdmin`
+
+All route handlers are wrapped with one of these from `@/lib/api-handlers`:
+
+```ts
+// withAuth — any authenticated user
+export const GET = withAuth(async (req, { user, supabase }) => {
+  // supabase is RLS-scoped to the authenticated user
+  const { data, error } = await supabase.from("appointments").select("*");
+  ...
+});
+
+// withAdmin — admin role required
+export const POST = withAdmin(async (req, { user, supabase }) => {
+  // For privileged ops (user creation, notifications) call getAdminClient() directly
+  const admin = getAdminClient();
+  await admin.auth.admin.createUser(...);
+  ...
+});
+```
+
+`resolveAuth` inside `api-handlers.ts` supports two auth methods:
+
+- **Bearer token** (AI tools / server-to-server): validated via `getAdminClient().auth.getUser(token)`, then a JWT-scoped client is built
+- **Session cookie** (browser requests): resolved via `getServerClient()`
+
+The `supabase` client injected into handlers is always JWT-scoped so RLS runs as the authenticated user. Use `getAdminClient()` only when you explicitly need to bypass RLS.
+
+### `useStaffByProfile` returns an array
+
+`useStaffByProfile(profileId)` returns `StaffProfile[]`, not a single object. Always access via `data?.[0]`:
+
+```ts
+const { data: staffData } = useStaffByProfile(userId);
+const staffProfile = staffData?.[0] ?? null;
+```
+
+### Report hook arg shape
+
+All report hooks take two ISO string args `(from, to)` and build `{ from, to }` internally before calling the service. Service functions take `DateRange` object — the hooks handle this conversion.
+
+### `DateRange` type
+
+Import from `@/services/reports.service` — it is `{ from: string; to: string }`. Also used as `import type { DateRange }` in dashboard components.
+
 ---
 
-## Zustand Stores
+## Zustand Stores (Client State Only)
+
+Zustand stores hold UI/session state. Server data (appointments, clients, etc.) lives in TanStack Query cache — do not duplicate it in Zustand.
 
 | Store                  | Key state                                                            |
 | ---------------------- | -------------------------------------------------------------------- |
@@ -448,6 +594,7 @@ POST /api/ai/chat
 ```
 
 **Knowledge base workflow**:
+
 1. Edit `src/ai/knowledge-base.md` — sections delimited by `## Heading`, role access via `<!-- roles: admin,staff -->` comment
 2. Run `npm run ingest-kb` — parses sections, embeds each with OpenAI, upserts into `document_chunks`
 3. The `retrieve` node fetches role-scoped chunks at query time using cosine similarity
@@ -472,6 +619,11 @@ POST /api/ai/chat
 
 ## Common Gotchas
 
+- **No direct service imports in components**: All data fetching goes through `src/hooks/` (TanStack Query). The only exception is `AssistantChat.tsx` + `aiConversationsService`.
+- **All service functions go through API routes**: Services are HTTP clients (`http.ts` + axios). They do not touch Supabase directly — the route handler does. Never add Supabase imports to a `*.service.ts` file.
+- **Use `withAuth` / `withAdmin` in every route handler**: Never call `getServerClient()` directly inside a route handler — use the `supabase` client injected by `withAuth`/`withAdmin`, which is already scoped to the user's JWT.
+- **`getAdminClient()` only for bypass**: Use it inside route handlers only when you explicitly need to skip RLS — user creation (`auth.admin.createUser`), notifications (`notify.ts`), or privileged stock updates. Never use it for ordinary reads/writes.
+- **Cache invalidation is automatic**: After a mutation's `onSuccess`, `qc.invalidateQueries(...)` triggers a background refetch. Components do not need to call `refetch()` manually or maintain their own `useState` for list data.
 - **npm install**: Always use `npm install --legacy-peer-deps --cache /tmp/npm-cache-glow` to avoid pnpm-generated lockfile issues and root-owned cache collisions.
 - **`getAdminClient` exists in two files**: `supabase-server.ts` (needs cookies context) and `supabase-admin.ts` (stateless, for auth.admin APIs). Use `supabase-admin.ts` for user creation via `auth.admin.*`.
 - **Supabase Realtime** is used for chat (`src/hooks/useRealtime.ts`). No custom WebSocket server.
