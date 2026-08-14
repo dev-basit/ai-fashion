@@ -20,20 +20,3 @@ export async function getServerClient() {
     },
   });
 }
-
-/** Admin client — bypasses RLS. Use only in trusted server contexts. */
-export async function getAdminClient() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(env.supabase.url, env.supabase.secretKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-        } catch {}
-      },
-    },
-  });
-}

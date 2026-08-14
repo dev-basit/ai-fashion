@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerClient } from "@/services/supabase-server";
 import { withAuth } from "@/lib/api-handlers";
 
-export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (_: NextRequest, { supabase }, ctx: { params: Promise<{ id: string }> }) => {
   const { id } = await ctx.params;
-  const supabase = await getServerClient();
   const { data, error } = await supabase
     .from("services")
     .select("*, service_categories(*), service_variants(*)")
@@ -13,7 +11,7 @@ export async function GET(_: NextRequest, ctx: { params: Promise<{ id: string }>
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json({ data });
-}
+});
 
 export const PATCH = withAuth(async (request: NextRequest, { supabase }, { params }) => {
   const { id } = await params;

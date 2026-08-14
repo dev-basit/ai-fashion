@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerClient } from "@/services/supabase-server";
-import { withAdmin } from "@/lib/api-handlers";
+import { withAuth, withAdmin } from "@/lib/api-handlers";
 
-export async function GET() {
-  const supabase = await getServerClient();
+export const GET = withAuth(async (_: NextRequest, { supabase }) => {
   const { data, error } = await supabase
     .from("product_categories")
     .select("*")
@@ -12,7 +10,7 @@ export async function GET() {
     .order("sort_order", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
-}
+});
 
 export const POST = withAdmin(async (request: NextRequest, { supabase }) => {
   const body = await request.json();

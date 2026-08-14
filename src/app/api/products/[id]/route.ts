@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerClient } from "@/services/supabase-server";
-import { withAdmin } from "@/lib/api-handlers";
+import { withAuth, withAdmin } from "@/lib/api-handlers";
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (_: NextRequest, { supabase }, { params }) => {
   const { id } = await params;
-  const supabase = await getServerClient();
   const { data, error } = await supabase.from("products").select("*, product_categories(*)").eq("id", id).single();
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
   return NextResponse.json({ data });
-}
+});
 
 export const PATCH = withAdmin(async (request: NextRequest, { supabase }, { params }) => {
   const { id } = await params;

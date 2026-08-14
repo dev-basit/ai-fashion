@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerClient } from "@/services/supabase-server";
 import { withAuth } from "@/lib/api-handlers";
 
-export async function GET(request: NextRequest) {
-  const supabase = await getServerClient();
+export const GET = withAuth(async (request: NextRequest, { supabase }) => {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get("search");
   const categoryId = searchParams.get("categoryId");
@@ -20,7 +18,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
-}
+});
 
 export const POST = withAuth(async (request: NextRequest, { supabase }) => {
   const body = await request.json();

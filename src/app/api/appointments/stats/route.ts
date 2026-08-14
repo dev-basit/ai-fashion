@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerClient } from "@/services/supabase-server";
+import type { NextRequest } from "next/server";
+import { withAuth } from "@/lib/api-handlers";
 
-export async function GET() {
-  const supabase = await getServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const GET = withAuth(async (_: NextRequest, { supabase }) => {
   const today = new Date();
   const start = new Date(today.setHours(0, 0, 0, 0)).toISOString();
   const end = new Date(today.setHours(23, 59, 59, 999)).toISOString();
@@ -40,4 +35,4 @@ export async function GET() {
       todayRevenue: revenue,
     },
   });
-}
+});

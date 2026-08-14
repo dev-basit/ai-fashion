@@ -23,6 +23,7 @@ async function resolveAuth(req: NextRequest): Promise<AuthContext | null> {
       data: { user },
     } = await getAdminClient().auth.getUser(token);
     if (!user) return null;
+
     // Scoped client — carries the user JWT so RLS applies correctly
     const supabase = createClient(env.supabase.url, env.supabase.publishableKey, {
       global: { headers: { Authorization: `Bearer ${token}` } },
