@@ -133,7 +133,11 @@ export function AssistantChat() {
         const res = await fetch("/api/ai/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message, conversationId: activeConversationId }),
+          body: JSON.stringify({
+            message,
+            conversationId: activeConversationId,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }),
         });
 
         const headerLimit = res.headers.get("X-RateLimit-Limit");

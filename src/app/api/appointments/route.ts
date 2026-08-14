@@ -35,7 +35,39 @@ export const GET = withAuth(async (request: NextRequest, { supabase }) => {
 
 export const POST = withAuth(async (request: NextRequest, { user, supabase }) => {
   const body = await request.json();
-  const { data, error } = await supabase.from("appointments").insert(body).select().single();
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const role = profile?.role as string | undefined;
+
+  // Customers always book for themselves; staff/admin must supply client_id in the body
+  const client_id = role === "customer" ? user.id : (body.client_id ?? null);
+  if (!client_id) return NextResponse.json({ error: "client_id is required" }, { status: 400 });
+
+  // Compute ends_at from the service duration when not explicitly provided
+  let ends_at: string | null = body.ends_at ?? null;
+  let price: number = body.price ?? 0;
+
+  if (body.service_id && !ends_at) {
+    const { data: svc } = await supabase
+      .from("services")
+      .select("duration_mins, base_price")
+      .eq("id", body.service_id)
+      .single();
+    if (svc) {
+      const start = new Date(body.starts_at);
+      start.setMinutes(start.getMinutes() + (svc.duration_mins ?? 60));
+      ends_at = start.toISOString();
+      if (price === 0) price = svc.base_price ?? 0;
+    }
+  }
+
+  if (!ends_at) return NextResponse.json({ error: "ends_at is required" }, { status: 400 });
+
+  const { data, error } = await supabase
+    .from("appointments")
+    .insert({ ...body, client_id, ends_at, price })
+    .select()
+    .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const apt = data as {

@@ -10,6 +10,7 @@ export const POST = withAuth(async (req, { user, supabase }) => {
   const body = await req.json();
   const message: string = body.message ?? "";
   const conversationId: string = body.conversationId ?? "";
+  const timezone: string = body.timezone;
 
   if (!message.trim()) return NextResponse.json({ error: "Bad Request" }, { status: 400 });
   if (!conversationId) return NextResponse.json({ error: "conversationId required" }, { status: 400 });
@@ -91,16 +92,26 @@ export const POST = withAuth(async (req, { user, supabase }) => {
 
   const remaining = env.ai.dailyLimit - (callCount + 1);
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       let fullResponse = "";
 
       try {
-        const agentStream = await graph.stream({ messages, userRole, context: "" }, { streamMode: "messages" });
+        const agentStream = await graph.stream(
+          { messages, userRole, context: "" },
+          {
+            streamMode: "messages",
+            configurable: { accessToken: session?.access_token ?? "", baseUrl: env.app.url, timezone },
+          },
+        );
         for await (const chunk of agentStream) {
           const [msgChunk, meta] = chunk as [BaseMessageChunk, { langgraph_node?: string }];
-          if (meta?.langgraph_node === "generate" && typeof msgChunk.content === "string") {
+          if (meta?.langgraph_node === "agent" && typeof msgChunk.content === "string") {
             fullResponse += msgChunk.content;
             controller.enqueue(encoder.encode(msgChunk.content));
           }
