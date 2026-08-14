@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useUpdateStaff } from "@/hooks/useStaff";
+import { useCreateStaff, useUpdateStaff } from "@/hooks/useStaff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import type { StaffFormProps } from "@/types/props";
-
 
 export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
   const isEdit = !!staff;
@@ -24,6 +23,7 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
   const [hourlyRate, setHourlyRate] = useState(staff?.hourly_rate?.toString() ?? "");
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate?.toString() ?? "");
   const [error, setError] = useState<string | null>(null);
+  const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
 
   const toArray = (s: string) =>
@@ -51,10 +51,8 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
         return;
       }
     } else {
-      const res = await fetch("/api/staff", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await createStaff.mutateAsync({
           email,
           password,
           full_name: fullName,
@@ -65,12 +63,10 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
           hire_date: hireDate || null,
           hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
           commission_rate: commissionRate ? parseFloat(commissionRate) : null,
-        }),
-      });
-      if (!res.ok) {
-        let j: Record<string, unknown> = {};
-        try { j = await res.json(); } catch { /* ignore */ }
-        setError((j.error as string) ?? "Failed to create staff");
+        });
+      } catch (e: unknown) {
+        const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        setError(typeof detail === "string" ? detail : "Failed to create staff");
         return;
       }
     }

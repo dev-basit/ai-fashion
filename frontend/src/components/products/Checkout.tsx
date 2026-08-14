@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/utils/format";
+import { useCreateOrder } from "@/hooks/useOrders";
 
 export function Checkout({ userId, onDone }: CheckoutProps) {
   const { items, total, clearCart } = useCartStore();
@@ -17,13 +18,12 @@ export function Checkout({ userId, onDone }: CheckoutProps) {
   const [saving, setSaving] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const createOrder = useCreateOrder();
 
   const placeOrder = async () => {
     setSaving(true);
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const order = await createOrder.mutateAsync({
         client_id: userId,
         items: items.map((i) => ({
           product_id: i.product.id,
@@ -31,15 +31,15 @@ export function Checkout({ userId, onDone }: CheckoutProps) {
           unit_price: i.product.price,
         })),
         notes: notes || undefined,
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) return;
-    const { data } = await res.json();
-    if (!data) return;
-    clearCart();
-    setOrderId(data.id);
-    setConfirmed(true);
+      });
+      clearCart();
+      setOrderId(order.id);
+      setConfirmed(true);
+    } catch {
+      // order failed — stay on checkout page
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (confirmed) {

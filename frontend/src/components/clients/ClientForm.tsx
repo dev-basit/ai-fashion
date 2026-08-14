@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useUpdateClient } from "@/hooks/useClients";
+import { useCreateClient, useUpdateClient } from "@/hooks/useClients";
 import { clientSchema, type ClientFormData } from "@/types/schemas/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,10 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
 import type { ClientFormProps } from "@/types/props";
 
-
 export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
   const isEdit = !!client;
   const [error, setError] = useState<string | null>(null);
+  const createClient = useCreateClient();
   const updateClient = useUpdateClient();
 
   const {
@@ -23,7 +23,7 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting }
+    formState: { errors, isSubmitting },
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: {
@@ -32,8 +32,8 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
       full_name: client?.full_name ?? "",
       phone: client?.phone ?? "",
       date_of_birth: client?.date_of_birth ?? "",
-      notes: client?.notes ?? ""
-    }
+      notes: client?.notes ?? "",
+    },
   });
 
   const onSubmit = async (values: ClientFormData) => {
@@ -64,22 +64,18 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
         return;
       }
     } else {
-      const res = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      try {
+        await createClient.mutateAsync({
           email: values.email,
           password: values.password,
           full_name: values.full_name,
           phone: values.phone || null,
           date_of_birth: values.date_of_birth || null,
-          notes: values.notes || null
-        })
-      });
-      if (!res.ok) {
-        let j: Record<string, unknown> = {};
-        try { j = await res.json(); } catch { /* ignore */ }
-        setError((j.error as string) ?? "Failed to create client");
+          notes: values.notes || null,
+        });
+      } catch (e: unknown) {
+        const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+        setError(typeof detail === "string" ? detail : "Failed to create client");
         return;
       }
     }

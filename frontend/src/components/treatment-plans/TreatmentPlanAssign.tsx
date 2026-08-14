@@ -3,7 +3,7 @@
 import type { TreatmentPlanAssignProps } from "@/types/props";
 
 import { useState } from "react";
-import { useTreatmentPlanTemplates } from "@/hooks/useTreatmentPlans";
+import { useTreatmentPlanTemplates, useCreateClientTreatmentPlan } from "@/hooks/useTreatmentPlans";
 import { useClients } from "@/hooks/useClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,16 +24,15 @@ export function TreatmentPlanAssign({ assignedBy, onSuccess, onCancel }: Treatme
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const createPlan = useCreateClientTreatmentPlan();
   const template = templates.find((t) => t.id === templateId);
 
   const save = async () => {
     if (!clientId) return;
     setSaving(true);
     const endsOn = template ? format(addDays(new Date(startsOn), template.duration_days), "yyyy-MM-dd") : null;
-    await fetch("/api/treatment-plans", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await createPlan.mutateAsync({
         template_id: templateId || null,
         client_id: clientId,
         assigned_by: assignedBy,
@@ -42,9 +41,10 @@ export function TreatmentPlanAssign({ assignedBy, onSuccess, onCancel }: Treatme
         ends_on: endsOn,
         status: "active",
         progress_notes: [],
-      }),
-    });
-    setSaving(false);
+      });
+    } finally {
+      setSaving(false);
+    }
     onSuccess();
   };
 

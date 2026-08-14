@@ -7,7 +7,7 @@ import { appointmentSchema, type AppointmentFormData } from "@/types/schemas/app
 import { useServices } from "@/hooks/useServices";
 import { useStaff, useStaffByProfile } from "@/hooks/useStaff";
 import { useClients } from "@/hooks/useClients";
-import { useUpdateAppointment } from "@/hooks/useAppointments";
+import { useCreateAppointment, useUpdateAppointment } from "@/hooks/useAppointments";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
   const staffByProfile = useStaffByProfile(userRole === "staff" ? (userId ?? null) : null);
   const { data: clientsRaw } = useClients();
   const clients = (!clientId && !isEdit ? clientsRaw ?? [] : []) as Profile[];
+  const createAppointment = useCreateAppointment();
   const updateAppointment = useUpdateAppointment();
 
   const {
@@ -93,16 +94,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
       if (isEdit) {
         await updateAppointment.mutateAsync({ id: appointment!.id, ...payload });
       } else {
-        const res = await fetch("/api/appointments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...payload, status: "pending", payment_status: "unpaid" })
-        });
-        if (!res.ok) {
-          let json: Record<string, unknown> = {};
-          try { json = await res.json(); } catch { /* ignore */ }
-          throw new Error((json.error as string) ?? "Failed to create appointment");
-        }
+        await createAppointment.mutateAsync({ ...payload, status: "pending", payment_status: "unpaid" });
       }
       onSuccess();
     } catch (e) {

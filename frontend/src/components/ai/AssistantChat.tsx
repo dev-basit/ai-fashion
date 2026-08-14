@@ -8,6 +8,7 @@ import type { AIChatMessage } from "@/types/props";
 import type { AiConversation, AiMessage } from "@/types/database";
 import { SUGGESTED_QUESTIONS } from "@/config/ai";
 import { aiConversationsService } from "@/services/ai-conversations.service";
+import { getBrowserClient } from "@/services/supabase";
 import { useAIStore } from "@/store/ai.store";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
@@ -70,9 +71,8 @@ export function AssistantChat() {
 
   const handleNewChat = useCallback(async () => {
     if (!user) return;
-    const res = await fetch("/api/ai/conversations", { method: "POST" });
-    if (!res.ok) return;
-    const { data } = await res.json();
+    const { data, error } = await aiConversationsService.createConversation();
+    if (error || !data) return;
     setConversations((prev) => [data as AiConversation, ...prev]);
     setActiveConversationId(data.id);
     setMessages([]);
@@ -94,7 +94,7 @@ export function AssistantChat() {
   const handleDelete = useCallback(
     async (conversationId: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      await fetch(`/api/ai/conversations/${conversationId}`, { method: "DELETE" });
+      await aiConversationsService.deleteConversation(conversationId);
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
       if (activeConversationId === conversationId) {
         setActiveConversationId(null);
@@ -140,9 +140,14 @@ export function AssistantChat() {
       }
 
       try {
-        const res = await fetch("/api/ai/chat", {
+        const { data: { session } } = await getBrowserClient().auth.getSession();
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+        const res = await fetch(`${backendUrl}/ai/chat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({
             message,
             conversationId: activeConversationId,
@@ -157,8 +162,9 @@ export function AssistantChat() {
 
         if (res.status === 429) {
           const body = await res.json();
+          const errMsg = body?.detail?.message ?? "Daily AI limit reached. Resets at midnight.";
           setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, content: body.message, isError: true } : m)),
+            prev.map((m) => (m.id === assistantId ? { ...m, content: errMsg, isError: true } : m)),
           );
           return;
         }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Search } from "lucide-react";
-import { useChatRecipients } from "@/hooks/useChat";
+import { useChatRecipients, useCreateConversation } from "@/hooks/useChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,13 +10,13 @@ import { formatInitials } from "@/utils/format";
 import type { NewConversationDialogProps } from "@/types/props";
 import type { Profile } from "@/types/database";
 
-
 export function NewConversationDialog({ onCreated, onCancel }: NewConversationDialogProps) {
   const [search, setSearch] = useState("");
   const { data: recipientsRaw, isLoading: loading } = useChatRecipients();
   const recipients = (recipientsRaw ?? []) as Profile[];
   const [creating, setCreating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const createConversation = useCreateConversation();
 
   const filtered = search
     ? recipients.filter((r) => r.full_name?.toLowerCase().includes(search.toLowerCase()))
@@ -26,17 +26,11 @@ export function NewConversationDialog({ onCreated, onCancel }: NewConversationDi
     setError(null);
     setCreating(recipientId);
     try {
-      const res = await fetch("/api/chat/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipientId })
-      });
-      let json: Record<string, unknown> = {};
-      try { json = await res.json(); } catch { /* ignore */ }
-      if (res.ok && (json.data as Record<string, unknown>)?.id) {
-        onCreated((json.data as Record<string, unknown>).id as string);
+      const conv = await createConversation.mutateAsync(recipientId);
+      if (conv?.id) {
+        onCreated(conv.id);
       } else {
-        setError((json.error as string) ?? `Failed to open conversation (${res.status})`);
+        setError("Failed to open conversation");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");

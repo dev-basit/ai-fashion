@@ -58,7 +58,7 @@ function parseKnowledgeBase(raw: string): KBSection[] {
 }
 
 async function main() {
-  const kbPath = path.join(process.cwd(), "src/ai/knowledge-base.md");
+  const kbPath = path.join(process.cwd(), "../backend/knowledge-base.md");
   const raw = fs.readFileSync(kbPath, "utf-8");
   const sections = parseKnowledgeBase(raw);
 

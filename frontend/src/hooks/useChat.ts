@@ -42,6 +42,20 @@ export function useConversations() {
   };
 }
 
+export function useCreateConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (recipientId: string) => {
+      const { data, error } = await chatService.getOrCreateDirectConversation("", recipientId);
+      if (error) throw new Error(error.message);
+      return data as Conversation;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.chatConversations() });
+    },
+  });
+}
+
 export function useMessages(conversationId: string | null) {
   const { profile } = useAuth();
   const qc = useQueryClient();
