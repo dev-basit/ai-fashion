@@ -23,10 +23,17 @@ export function TreatmentPlanAssign({ assignedBy, onSuccess, onCancel }: Treatme
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    treatmentPlansService
-      .getTemplates()
-      .then(({ data }) => setTemplates((data as unknown as TreatmentPlanTemplate[]) ?? []));
-    clientsService.getAll().then(({ data }) => setClients(data ?? []));
+    const load = async () => {
+      try {
+        const [{ data: tplData }, { data: clientData }] = await Promise.all([
+          treatmentPlansService.getTemplates(),
+          clientsService.getAll(),
+        ]);
+        setTemplates((tplData as unknown as TreatmentPlanTemplate[]) ?? []);
+        setClients(clientData ?? []);
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   const template = templates.find((t) => t.id === templateId);

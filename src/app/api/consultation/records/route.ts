@@ -7,11 +7,16 @@ export const GET = withAuth(async (request: NextRequest, { supabase }) => {
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get("clientId");
 
+  const staffProfileId = searchParams.get("staffProfileId");
+
   let query = supabase
     .from("consultation_records")
-    .select("*, profiles!client_id(id, full_name), consultation_form_templates(name)")
+    .select(
+      "*, profiles!client_id(id, full_name, avatar_url), staff_profiles(profiles(full_name)), consultation_form_templates(name)",
+    )
     .order("created_at", { ascending: false });
   if (clientId) query = query.eq("client_id", clientId);
+  if (staffProfileId) query = query.eq("staff_profile_id", staffProfileId);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

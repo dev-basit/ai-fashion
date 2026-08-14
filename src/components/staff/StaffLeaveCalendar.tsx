@@ -21,8 +21,11 @@ export function StaffLeaveCalendar({ staffProfileId, editable = true }: StaffLea
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(() => {
-    staffService.getLeaves(staffProfileId).then(({ data }) => setLeaves((data as StaffLeave[]) ?? []));
+  const load = useCallback(async () => {
+    try {
+      const { data } = await staffService.getLeaves(staffProfileId);
+      setLeaves((data as StaffLeave[]) ?? []);
+    } catch { /* ignore */ }
   }, [staffProfileId]);
 
   useEffect(() => {

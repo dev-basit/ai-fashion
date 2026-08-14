@@ -53,8 +53,15 @@ export function AppointmentDetail({ appointmentId, role }: AppointmentDetailProp
 
   useEffect(() => {
     load();
-    if (isStaffOrAdmin)
-      productsService.getAll().then(({ data }) => setProducts((data as unknown as Product[]) ?? []));
+    if (isStaffOrAdmin) {
+      const load = async () => {
+        try {
+          const { data } = await productsService.getAll();
+          setProducts((data as unknown as Product[]) ?? []);
+        } catch { /* ignore */ }
+      };
+      load();
+    }
   }, [load, isStaffOrAdmin]);
 
   const saveNotes = async () => {

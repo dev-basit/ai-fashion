@@ -74,8 +74,9 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
         })
       });
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(j.error ?? "Failed to create client");
+        let j: Record<string, unknown> = {};
+        try { j = await res.json(); } catch { /* ignore */ }
+        setError((j.error as string) ?? "Failed to create client");
         return;
       }
     }

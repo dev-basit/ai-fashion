@@ -32,10 +32,15 @@ export function AssistantChat() {
 
   // Load conversations on mount
   useEffect(() => {
-    aiConversationsService.getConversations().then(({ data }) => {
-      if (data) setConversations(data as unknown as AiConversation[]);
-      setIsLoadingConvs(false);
-    });
+    const load = async () => {
+      try {
+        const { data } = await aiConversationsService.getConversations();
+        if (data) setConversations(data as unknown as AiConversation[]);
+      } finally {
+        setIsLoadingConvs(false);
+      }
+    };
+    load();
   }, []);
 
   // Load messages when active conversation changes
@@ -45,10 +50,15 @@ export function AssistantChat() {
       return;
     }
     setIsLoadingMessages(true);
-    aiConversationsService.getMessages(activeConversationId).then(({ data }) => {
-      if (data) setMessages((data as unknown as AiMessage[]).map(toAIChatMessage));
-      setIsLoadingMessages(false);
-    });
+    const load = async () => {
+      try {
+        const { data } = await aiConversationsService.getMessages(activeConversationId);
+        if (data) setMessages((data as unknown as AiMessage[]).map(toAIChatMessage));
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+    load();
   }, [activeConversationId]);
 
   // Scroll to bottom when messages change

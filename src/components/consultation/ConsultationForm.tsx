@@ -29,7 +29,15 @@ export function ConsultationForm({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!clientId) clientsService.getAll().then(({ data }) => setClients(data ?? []));
+    if (!clientId) {
+      const load = async () => {
+        try {
+          const { data } = await clientsService.getAll();
+          setClients(data ?? []);
+        } catch { /* ignore */ }
+      };
+      load();
+    }
   }, [clientId]);
 
   const setResp = (fieldId: string, value: unknown) => setResponses((p) => ({ ...p, [fieldId]: value }));

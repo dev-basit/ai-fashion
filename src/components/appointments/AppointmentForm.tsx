@@ -54,26 +54,34 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
   });
 
   useEffect(() => {
-    servicesService.getAllServices().then(({ data }) => setServices((data as unknown as Service[]) ?? []));
+    const load = async () => {
+      try {
+        const { data: svcData } = await servicesService.getAllServices();
+        setServices((svcData as unknown as Service[]) ?? []);
 
-    if (userRole === "staff") {
-      // Auto-resolve logged-in staff member's profile — no dropdown shown
-      if (userId) {
-        staffService.getByProfileId(userId).then(({ data }) => {
-          if (data) {
-            setValue("staff_profile_id", data.id);
+        if (userRole === "staff") {
+          // Auto-resolve logged-in staff member's profile — no dropdown shown
+          if (userId) {
+            try {
+              const { data } = await staffService.getByProfileId(userId);
+              if (data) setValue("staff_profile_id", data.id);
+            } finally {
+              setStaffResolved(true);
+            }
           }
-          setStaffResolved(true);
-        });
-      }
-    } else {
-      // Admin / customer: load full staff list
-      staffService.getAll().then(({ data }) => setStaffList((data as unknown as StaffProfile[]) ?? []));
-    }
+        } else {
+          // Admin / customer: load full staff list
+          const { data: staffData } = await staffService.getAll();
+          setStaffList((staffData as unknown as StaffProfile[]) ?? []);
+        }
 
-    if (!clientId && !isEdit) {
-      clientsService.getAll().then(({ data }) => setClients(data ?? []));
-    }
+        if (!clientId && !isEdit) {
+          const { data: clientData } = await clientsService.getAll();
+          setClients(clientData ?? []);
+        }
+      } catch { /* ignore */ }
+    };
+    load();
   }, [clientId, isEdit, userRole, userId, setValue]);
 
   const onSubmit = async (data: AppointmentFormData) => {
@@ -110,8 +118,9 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
         body: JSON.stringify({ ...payload, status: "pending", payment_status: "unpaid" })
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        err = { message: json.error ?? "Failed to create appointment" };
+        let json: Record<string, unknown> = {};
+        try { json = await res.json(); } catch { /* ignore */ }
+        err = { message: (json.error as string) ?? "Failed to create appointment" };
       }
     }
 

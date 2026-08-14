@@ -23,8 +23,9 @@ export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffSche
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const load = useCallback(() => {
-    staffService.getSchedule(staffProfileId).then(({ data }) => {
+  const load = useCallback(async () => {
+    try {
+      const { data } = await staffService.getSchedule(staffProfileId);
       if (data && data.length) {
         const byDay = new Map((data as StaffSchedule[]).map((s) => [s.day_of_week, s]));
         setRows(
@@ -41,7 +42,7 @@ export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffSche
           }),
         );
       }
-    });
+    } catch { /* ignore */ }
   }, [staffProfileId]);
 
   useEffect(() => {

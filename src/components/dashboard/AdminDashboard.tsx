@@ -39,7 +39,7 @@ export function AdminDashboard({ userId }: { userId: string }) {
       reportsService.getDashboardStats(r),
       appointmentsService.getAll({ dateFrom: r.from, dateTo: r.to }),
     ]);
-    setStats(statsResult);
+    if (statsResult.data) setStats(statsResult.data);
     setAppointments(
       ((aptsResult.data as Appointment[]) ?? []).sort(
         (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),

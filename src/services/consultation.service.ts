@@ -1,83 +1,67 @@
-import { getBrowserClient } from "./supabase";
+import http from "./http";
+import { API_ROUTES } from "@/config/constants";
+import { responseData, responseError } from "@/lib/utils";
 import type { ConsultationFormTemplate, ConsultationRecord } from "@/types/database";
 
 export const consultationService = {
   async getTemplates() {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("consultation_form_templates")
-      .select("*")
-      .eq("is_active", true)
-      .order("name", { ascending: true });
+    try {
+      const res = await http.get(API_ROUTES.consultationTemplates);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getTemplateById(id: string) {
-    const supabase = getBrowserClient();
-    return supabase.from("consultation_form_templates").select("*").eq("id", id).single();
+    try {
+      const res = await http.get(API_ROUTES.consultationTemplateById(id));
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async createTemplate(payload: Partial<ConsultationFormTemplate>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("consultation_form_templates")
-      .insert(payload as any)
-      .select()
-      .single();
+    try {
+      const res = await http.post(API_ROUTES.consultationTemplates, payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateTemplate(id: string, payload: Partial<ConsultationFormTemplate>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("consultation_form_templates")
-      .update(payload as any)
-      .eq("id", id)
-      .select()
-      .single();
+    try {
+      const res = await http.patch(API_ROUTES.consultationTemplateById(id), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getAllRecords(filters?: { clientId?: string; staffProfileId?: string }) {
-    const supabase = getBrowserClient();
-    let query = supabase
-      .from("consultation_records")
-      .select(
-        "*, profiles!client_id(id, full_name, avatar_url), staff_profiles(profiles(full_name)), consultation_form_templates(name)",
-      )
-      .order("created_at", { ascending: false });
-
-    if (filters?.clientId) query = query.eq("client_id", filters.clientId);
-    if (filters?.staffProfileId) query = query.eq("staff_profile_id", filters.staffProfileId);
-    return query;
+    try {
+      const res = await http.get(API_ROUTES.consultationRecords, {
+        params: {
+          clientId: filters?.clientId,
+          staffProfileId: filters?.staffProfileId,
+        },
+      });
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getRecordById(id: string) {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("consultation_records")
-      .select("*, profiles!client_id(*), staff_profiles(*, profiles(*)), consultation_form_templates(*)")
-      .eq("id", id)
-      .single();
+    try {
+      const res = await http.get(API_ROUTES.consultationRecordById(id));
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async createRecord(payload: Partial<ConsultationRecord>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("consultation_records")
-      .insert(payload as any)
-      .select()
-      .single();
+    try {
+      const res = await http.post(API_ROUTES.consultationRecords, payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateRecord(id: string, payload: Partial<ConsultationRecord>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("consultation_records")
-      .update(payload as any)
-      .eq("id", id)
-      .select()
-      .single();
+    try {
+      const res = await http.patch(API_ROUTES.consultationRecordById(id), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 };

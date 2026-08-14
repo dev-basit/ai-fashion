@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/api-handlers";
 
-export const GET = withAuth(async (_request, { supabase }) => {
-  const { data, error } = await supabase.from("business_settings").select("*");
+export const GET = withAuth(async (request: NextRequest, { supabase }) => {
+  const key = new URL(request.url).searchParams.get("key");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase.from("business_settings").select("*");
+  if (key) query = query.eq("key", key);
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
 });

@@ -90,11 +90,12 @@ export function NewConversationDialog({ userId, userRole, onCreated, onCancel }:
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipientId })
       });
-      const json = await res.json().catch(() => ({}));
-      if (res.ok && json.data?.id) {
-        onCreated(json.data.id);
+      let json: Record<string, unknown> = {};
+      try { json = await res.json(); } catch { /* ignore */ }
+      if (res.ok && (json.data as Record<string, unknown>)?.id) {
+        onCreated((json.data as Record<string, unknown>).id as string);
       } else {
-        setError(json.error ?? `Failed to open conversation (${res.status})`);
+        setError((json.error as string) ?? `Failed to open conversation (${res.status})`);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");

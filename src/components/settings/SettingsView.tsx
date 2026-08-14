@@ -103,14 +103,18 @@ function NotificationsTab() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    settingsService.get("notification_settings").then(({ data }) => {
-      if (data?.value) {
-        const v = data.value as { email?: boolean; sms?: boolean; reminder_hours?: number };
-        if (v.email !== undefined) setEmailEnabled(v.email);
-        if (v.sms !== undefined) setSmsEnabled(v.sms);
-        if (v.reminder_hours !== undefined) setReminderHours(String(v.reminder_hours));
-      }
-    });
+    const load = async () => {
+      try {
+        const { data } = await settingsService.get("notification_settings");
+        if (data?.value) {
+          const v = data.value as { email?: boolean; sms?: boolean; reminder_hours?: number };
+          if (v.email !== undefined) setEmailEnabled(v.email);
+          if (v.sms !== undefined) setSmsEnabled(v.sms);
+          if (v.reminder_hours !== undefined) setReminderHours(String(v.reminder_hours));
+        }
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   const save = async () => {
@@ -171,13 +175,17 @@ function WorkingHoursTab() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    settingsService.get("working_hours").then(({ data }) => {
-      if (data?.value) {
-        const v = data.value as { opening?: string; closing?: string };
-        if (v.opening) setOpening(v.opening);
-        if (v.closing) setClosing(v.closing);
-      }
-    });
+    const load = async () => {
+      try {
+        const { data } = await settingsService.get("working_hours");
+        if (data?.value) {
+          const v = data.value as { opening?: string; closing?: string };
+          if (v.opening) setOpening(v.opening);
+          if (v.closing) setClosing(v.closing);
+        }
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   const save = async () => {
@@ -216,15 +224,14 @@ function StaffScheduleTab({ profileId }: { profileId: string }) {
   const [staffProfileId, setStaffProfileId] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = getBrowserClient();
-    supabase
-      .from("staff_profiles")
-      .select("id")
-      .eq("profile_id", profileId)
-      .single()
-      .then(({ data }) => {
+    const load = async () => {
+      try {
+        const supabase = getBrowserClient();
+        const { data } = await supabase.from("staff_profiles").select("id").eq("profile_id", profileId).single();
         if (data) setStaffProfileId(data.id);
-      });
+      } catch { /* ignore */ }
+    };
+    load();
   }, [profileId]);
 
   if (!staffProfileId) return <PageLoading />;
@@ -254,15 +261,20 @@ export function SettingsView({ profile }: SettingsViewProps) {
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    settingsService.get("business_profile").then(({ data }) => {
-      if (data) {
-        const val = data.value as { name?: string; phone?: string; email?: string };
-        setBusinessName(val.name ?? "");
-        setBusinessPhone(val.phone ?? "");
-        setBusinessEmail(val.email ?? "");
+    const load = async () => {
+      try {
+        const { data } = await settingsService.get("business_profile");
+        if (data) {
+          const val = data.value as { name?: string; phone?: string; email?: string };
+          setBusinessName(val.name ?? "");
+          setBusinessPhone(val.phone ?? "");
+          setBusinessEmail(val.email ?? "");
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
+    load();
   }, []);
 
   const saveBusinessProfile = async () => {

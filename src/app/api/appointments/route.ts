@@ -18,8 +18,10 @@ export const GET = withAuth(async (request: NextRequest, { supabase }) => {
     )
     .order("starts_at", { ascending: false });
 
+  const serviceId = searchParams.get("serviceId");
   if (clientId) query = query.eq("client_id", clientId);
   if (staffProfileId) query = query.eq("staff_profile_id", staffProfileId);
+  if (serviceId) query = query.eq("service_id", serviceId);
   if (status)
     query = query.eq(
       "status",

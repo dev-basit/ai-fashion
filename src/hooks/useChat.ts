@@ -33,9 +33,13 @@ export function useMessages(conversationId: string | null) {
   useEffect(() => {
     if (!conversationId) return;
 
-    chatService.getMessages(conversationId).then(({ data }) => {
-      if (data) setMessages(conversationId, data as Message[]);
-    });
+    const loadMessages = async () => {
+      try {
+        const { data } = await chatService.getMessages(conversationId);
+        if (data) setMessages(conversationId, data as Message[]);
+      } catch { /* ignore */ }
+    };
+    loadMessages();
 
     const supabase = getBrowserClient();
     channelRef.current = supabase

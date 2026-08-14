@@ -3,11 +3,18 @@ import type { NextRequest } from "next/server";
 import { withAuth, withAdmin } from "@/lib/api-handlers";
 import { getAdminClient } from "@/services/supabase-admin";
 
-export const GET = withAuth(async (_request, { supabase }) => {
-  const { data, error } = await supabase
+export const GET = withAuth(async (request, { supabase }) => {
+  const { searchParams } = new URL(request.url);
+  const profileId = searchParams.get("profileId");
+
+  let query = supabase
     .from("staff_profiles")
     .select("*, profiles(id, full_name, avatar_url, phone, is_active)")
     .order("created_at", { ascending: false });
+
+  if (profileId) query = query.eq("profile_id", profileId);
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
 });

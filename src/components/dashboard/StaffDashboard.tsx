@@ -23,25 +23,37 @@ export function StaffDashboard({ userId }: { userId: string }) {
   const [aptsLoading, setAptsLoading] = useState(false);
 
   useEffect(() => {
-    staffService.getByProfileId(userId).then(({ data }) => {
-      setStaffProfile(data as StaffProfile | null);
-      setLoading(false);
-    });
+    const load = async () => {
+      try {
+        const { data } = await staffService.getByProfileId(userId);
+        setStaffProfile(data as StaffProfile | null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [userId]);
 
   useEffect(() => {
     if (!staffProfile || !range.from || !range.to) return;
     setAptsLoading(true);
-    appointmentsService
-      .getAll({ staffProfileId: staffProfile.id, dateFrom: range.from, dateTo: range.to })
-      .then(({ data }) => {
+    const load = async () => {
+      try {
+        const { data } = await appointmentsService.getAll({
+          staffProfileId: staffProfile.id,
+          dateFrom: range.from,
+          dateTo: range.to,
+        });
         setAppointments(
           ((data as Appointment[]) ?? []).sort(
             (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
           ),
         );
+      } finally {
         setAptsLoading(false);
-      });
+      }
+    };
+    load();
   }, [staffProfile, range]);
 
   const handleRangeChange = (p: DatePreset, r: DateRange) => {

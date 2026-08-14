@@ -1,108 +1,97 @@
-import { getBrowserClient } from "./supabase";
+import http from "./http";
+import { API_ROUTES } from "@/config/constants";
+import { responseData, responseError } from "@/lib/utils";
 import type { Service, ServiceCategory, ServiceVariant } from "@/types/database";
 
 export const servicesService = {
   async getAllServices(categoryId?: string) {
-    const supabase = getBrowserClient();
-    let query = supabase
-      .from("services")
-      .select("*, service_categories(id, name), service_variants(*)")
-      .order("sort_order", { ascending: true });
-    if (categoryId) query = query.eq("category_id", categoryId);
-    return query;
+    try {
+      const res = await http.get(API_ROUTES.services, { params: categoryId ? { categoryId } : undefined });
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getServiceById(id: string) {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("services")
-      .select("*, service_categories(id, name), service_variants(*)")
-      .eq("id", id)
-      .single();
+    try {
+      const res = await http.get(API_ROUTES.serviceById(id));
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async createService(payload: Partial<Service>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("services")
-      .insert(payload as any)
-      .select()
-      .single();
+    try {
+      const res = await http.post(API_ROUTES.services, payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateService(id: string, payload: Partial<Service>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("services")
-      .update(payload as any)
-      .eq("id", id)
-      .select()
-      .single();
+    try {
+      const res = await http.patch(API_ROUTES.serviceById(id), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async deleteService(id: string) {
-    const supabase = getBrowserClient();
-    return supabase.from("services").update({ is_active: false }).eq("id", id);
+    try {
+      const res = await http.delete(API_ROUTES.serviceById(id));
+      return responseData(res.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getAllCategories() {
-    const supabase = getBrowserClient();
-    return supabase.from("service_categories").select("*").order("sort_order", { ascending: true });
+    try {
+      const res = await http.get(API_ROUTES.serviceCategories);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async createCategory(payload: Partial<ServiceCategory>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("service_categories")
-      .insert(payload as any)
-      .select()
-      .single();
+    try {
+      const res = await http.post(API_ROUTES.serviceCategories, payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateCategory(id: string, payload: Partial<ServiceCategory>) {
-    const supabase = getBrowserClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return supabase
-      .from("service_categories")
-      .update(payload as any)
-      .eq("id", id)
-      .select()
-      .single();
+    try {
+      const res = await http.patch(API_ROUTES.serviceCategoryById(id), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async deleteCategory(id: string) {
-    const supabase = getBrowserClient();
-    return supabase.from("service_categories").update({ is_active: false }).eq("id", id);
+    try {
+      const res = await http.delete(API_ROUTES.serviceCategoryById(id));
+      return responseData(res.data);
+    } catch (e) { return responseError(e); }
   },
 
   async createVariant(payload: Partial<ServiceVariant>) {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("service_variants")
-      .insert(payload as ServiceVariant)
-      .select()
-      .single();
+    try {
+      const res = await http.post(API_ROUTES.serviceVariants(payload.service_id!), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateVariant(id: string, payload: Partial<ServiceVariant>) {
-    const supabase = getBrowserClient();
-    return supabase.from("service_variants").update(payload).eq("id", id).select().single();
+    try {
+      const res = await http.patch(API_ROUTES.serviceVariantById(id), payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async deleteVariant(id: string) {
-    const supabase = getBrowserClient();
-    return supabase.from("service_variants").delete().eq("id", id);
+    try {
+      const res = await http.delete(API_ROUTES.serviceVariantById(id));
+      return responseData(res.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getVariants(serviceId: string) {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("service_variants")
-      .select("*")
-      .eq("service_id", serviceId)
-      .order("created_at", { ascending: true });
+    try {
+      const res = await http.get(API_ROUTES.serviceVariants(serviceId));
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 };

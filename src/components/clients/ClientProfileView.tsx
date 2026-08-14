@@ -48,16 +48,18 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
 
   const isStaffOrAdmin = role === "staff" || role === "admin";
 
-  const loadHistory = useCallback(() => {
-    clientsService.getClientHistory(client.id).then((data) => {
+  const loadHistory = useCallback(async () => {
+    try {
+      const { data } = await clientsService.getClientHistory(client.id);
       setHistory({
-        appointments: (data.appointments as unknown as Appointment[]) ?? undefined,
-        orders: (data.orders as unknown as Order[]) ?? undefined,
-        consultations: (data.consultations as unknown as ConsultationRecord[]) ?? undefined,
-        plans: (data.plans as unknown as ClientTreatmentPlan[]) ?? undefined,
+        appointments: (data?.appointments as unknown as Appointment[]) ?? undefined,
+        orders: (data?.orders as unknown as Order[]) ?? undefined,
+        consultations: (data?.consultations as unknown as ConsultationRecord[]) ?? undefined,
+        plans: (data?.plans as unknown as ClientTreatmentPlan[]) ?? undefined,
       });
+    } finally {
       setLoading(false);
-    });
+    }
   }, [client.id]);
 
   useEffect(() => {

@@ -13,11 +13,19 @@ export function StaffServiceAssignment({ staffProfileId, editable = true }: Staf
   const [assigned, setAssigned] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    servicesService.getAllServices().then(({ data }) => setServices((data as unknown as Service[]) ?? []));
-    staffService.getById(staffProfileId).then(({ data }) => {
-      const rows = (data as { staff_services?: { services?: { id: string } }[] } | null)?.staff_services ?? [];
-      setAssigned(new Set(rows.map((r) => r.services?.id).filter(Boolean) as string[]));
-    });
+    const load = async () => {
+      try {
+        const [{ data: svcData }, { data: staffData }] = await Promise.all([
+          servicesService.getAllServices(),
+          staffService.getById(staffProfileId),
+        ]);
+        setServices((svcData as unknown as Service[]) ?? []);
+        const rows =
+          (staffData as { staff_services?: { services?: { id: string } }[] } | null)?.staff_services ?? [];
+        setAssigned(new Set(rows.map((r) => r.services?.id).filter(Boolean) as string[]));
+      } catch { /* ignore */ }
+    };
+    load();
   }, [staffProfileId]);
 
   const toggle = async (serviceId: string, checked: boolean) => {

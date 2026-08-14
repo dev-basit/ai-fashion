@@ -25,9 +25,17 @@ export function AppointmentFilters({ showProvider = true }: { showProvider?: boo
   const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
-    if (showProvider)
-      staffService.getAll().then(({ data }) => setStaff((data as unknown as StaffProfile[]) ?? []));
-    servicesService.getAllServices().then(({ data }) => setServices((data as unknown as Service[]) ?? []));
+    const load = async () => {
+      try {
+        if (showProvider) {
+          const { data } = await staffService.getAll();
+          setStaff((data as unknown as StaffProfile[]) ?? []);
+        }
+        const { data: svcData } = await servicesService.getAllServices();
+        setServices((svcData as unknown as Service[]) ?? []);
+      } catch { /* ignore */ }
+    };
+    load();
   }, [showProvider]);
 
   const hasFilters = statusFilter !== "all" || !!staffFilter || !!serviceFilter;

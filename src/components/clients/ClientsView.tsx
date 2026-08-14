@@ -38,7 +38,13 @@ export function ClientsView({ role }: ClientsViewProps) {
   const { clients, isLoading, refetch } = useClients(search || undefined);
 
   useEffect(() => {
-    clientsService.getAppointmentCountsByClient().then(setCounts);
+    const load = async () => {
+      try {
+        const { data } = await clientsService.getAppointmentCountsByClient();
+        if (data) setCounts(data);
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   const isVip = (notes: string | null) => !!notes && /vip/i.test(notes);

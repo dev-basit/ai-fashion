@@ -2,11 +2,24 @@ import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-handlers";
 import { getAdminClient } from "@/services/supabase-admin";
 
-export const GET = withAuth(async (_request, { user, supabase }) => {
-  const { data, error } = await supabase
+export const GET = withAuth(async (_request, { user }) => {
+  // Explicit membership filter — no RLS. Get conversation IDs the user belongs to, then
+  // fetch those conversations with ALL participants so the UI can show the other person's name.
+  const admin = getAdminClient();
+
+  const { data: memberships, error: mErr } = await admin
+    .from("conversation_participants")
+    .select("conversation_id")
+    .eq("profile_id", user.id);
+  if (mErr) return NextResponse.json({ error: mErr.message }, { status: 500 });
+
+  const convIds = (memberships ?? []).map((m) => m.conversation_id);
+  if (!convIds.length) return NextResponse.json({ data: [] });
+
+  const { data, error } = await admin
     .from("conversations")
-    .select("*, conversation_participants!inner(profile_id, profiles(id, full_name, avatar_url))")
-    .eq("conversation_participants.profile_id", user.id)
+    .select("*, conversation_participants(profile_id, last_read_at, profiles(id, full_name, avatar_url))")
+    .in("id", convIds)
     .order("updated_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });

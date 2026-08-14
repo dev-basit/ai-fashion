@@ -19,3 +19,12 @@ export function relativeTime(iso: string): string {
     return "";
   }
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const responseData = (data: any) => ({ data, error: null });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const responseError = (e: any) => ({
+  data: null,
+  error: { message: e?.response?.data?.error ?? e?.message ?? "Unknown error" },
+});

@@ -2,6 +2,67 @@ import type { AppointmentStatus, PaymentStatus, PlanStatus } from "@/types/datab
 
 export const APP_NAME = "Glow By Miral";
 
+export const API_ROUTES = {
+  // Appointments
+  appointments: "/appointments",
+  appointmentById: (id: string) => `/appointments/${id}`,
+  appointmentProducts: (id: string) => `/appointments/${id}/products`,
+  appointmentProductById: (id: string) => `/appointments/products/${id}`,
+  // Clients
+  clients: "/clients",
+  clientById: (id: string) => `/clients/${id}`,
+  clientHistory: (id: string) => `/clients/${id}/history`,
+  clientAppointmentCounts: "/clients/appointment-counts",
+  // Staff
+  staff: "/staff",
+  staffById: (id: string) => `/staff/${id}`,
+  staffSchedule: (id: string) => `/staff/${id}/schedule`,
+  staffLeaves: (id: string) => `/staff/${id}/leaves`,
+  staffServices: (id: string) => `/staff/${id}/services`,
+  staffServiceById: (id: string, svcId: string) => `/staff/${id}/services/${svcId}`,
+  // Services
+  services: "/services",
+  serviceById: (id: string) => `/services/${id}`,
+  serviceVariants: (id: string) => `/services/${id}/variants`,
+  serviceVariantById: (id: string) => `/services/variants/${id}`,
+  serviceCategories: "/services/categories",
+  serviceCategoryById: (id: string) => `/services/categories/${id}`,
+  // Products
+  products: "/products",
+  productById: (id: string) => `/products/${id}`,
+  productCategories: "/products/categories",
+  productsLowStock: "/products/low-stock",
+  // Orders
+  orders: "/orders",
+  orderById: (id: string) => `/orders/${id}`,
+  // Consultation
+  consultationTemplates: "/consultation/templates",
+  consultationTemplateById: (id: string) => `/consultation/templates/${id}`,
+  consultationRecords: "/consultation/records",
+  consultationRecordById: (id: string) => `/consultation/records/${id}`,
+  // Treatment Plans
+  treatmentPlanTemplates: "/treatment-plans/templates",
+  treatmentPlanTemplateById: (id: string) => `/treatment-plans/templates/${id}`,
+  treatmentPlans: "/treatment-plans",
+  treatmentPlanById: (id: string) => `/treatment-plans/${id}`,
+  // Reports
+  reports: "/reports",
+  // Settings
+  settings: "/settings",
+  // Notifications
+  notifications: "/notifications",
+  notificationRead: (id: string) => `/notifications/${id}/read`,
+  notificationsReadAll: "/notifications/read-all",
+  notificationsUnreadCount: "/notifications/unread-count",
+  // Chat
+  chatConversations: "/chat/conversations",
+  chatConversationById: (id: string) => `/chat/conversations/${id}`,
+  chatMessages: (id: string) => `/chat/conversations/${id}/messages`,
+  chatMarkRead: (id: string) => `/chat/conversations/${id}/read`,
+  // Me
+  me: "/me",
+} as const;
+
 export const ROUTES = {
   home: "/",
   login: "/login",

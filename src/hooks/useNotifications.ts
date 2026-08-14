@@ -13,13 +13,17 @@ export function useNotifications() {
 
   useEffect(() => {
     if (!profile?.id) return;
-    notificationsService.getAll(profile.id).then(({ data }) => {
-      if (data) {
-        const typed = data as unknown as Notification[];
-        setNotifications(typed);
-        setUnreadCount(typed.filter((n) => !n.is_read).length);
-      }
-    });
+    const load = async () => {
+      try {
+        const { data } = await notificationsService.getAll(profile.id);
+        if (data) {
+          const typed = data as unknown as Notification[];
+          setNotifications(typed);
+          setUnreadCount(typed.filter((n) => !n.is_read).length);
+        }
+      } catch { /* ignore */ }
+    };
+    load();
   }, [profile?.id]);
 
   useRealtime({

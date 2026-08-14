@@ -17,8 +17,11 @@ export function ServiceVariantManager({ serviceId }: ServiceVariantManagerProps)
   const [durationMod, setDurationMod] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(() => {
-    servicesService.getVariants(serviceId).then(({ data }) => setVariants((data as ServiceVariant[]) ?? []));
+  const load = useCallback(async () => {
+    try {
+      const { data } = await servicesService.getVariants(serviceId);
+      setVariants((data as ServiceVariant[]) ?? []);
+    } catch { /* ignore */ }
   }, [serviceId]);
 
   useEffect(() => {

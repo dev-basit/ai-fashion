@@ -28,7 +28,13 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [error, setError] = useState("");
 
   useEffect(() => {
-    productsService.getAllCategories().then(({ data }) => setCategories(data ?? []));
+    const load = async () => {
+      try {
+        const { data } = await productsService.getAllCategories();
+        setCategories(data ?? []);
+      } catch { /* ignore */ }
+    };
+    load();
   }, []);
 
   const save = async () => {

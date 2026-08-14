@@ -1,25 +1,21 @@
-import { getBrowserClient } from "./supabase";
-import type { Order, OrderItem, OrderStatus } from "@/types/database";
+import http from "./http";
+import { API_ROUTES } from "@/config/constants";
+import { responseData, responseError } from "@/lib/utils";
+import type { OrderStatus } from "@/types/database";
 
 export const ordersService = {
   async getAll(clientId?: string) {
-    const supabase = getBrowserClient();
-    let query = supabase
-      .from("orders")
-      .select("*, profiles!client_id(id, full_name), order_items(*, products(name, image_url))")
-      .order("created_at", { ascending: false });
-
-    if (clientId) query = query.eq("client_id", clientId);
-    return query;
+    try {
+      const res = await http.get(API_ROUTES.orders, { params: clientId ? { clientId } : undefined });
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async getById(id: string) {
-    const supabase = getBrowserClient();
-    return supabase
-      .from("orders")
-      .select("*, profiles!client_id(id, full_name, phone), order_items(*, products(*))")
-      .eq("id", id)
-      .single();
+    try {
+      const res = await http.get(API_ROUTES.orderById(id));
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async create(payload: {
@@ -27,30 +23,16 @@ export const ordersService = {
     items: Array<{ product_id: string; quantity: number; unit_price: number }>;
     notes?: string;
   }) {
-    const supabase = getBrowserClient();
-    const total = payload.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-    const { data: order, error } = await supabase
-      .from("orders")
-      .insert({ client_id: payload.client_id, total_amount: total, notes: payload.notes })
-      .select()
-      .single();
-
-    if (error || !order) return { data: null, error };
-
-    const items = payload.items.map((item) => ({
-      order_id: order.id,
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-    }));
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: itemsError } = await supabase.from("order_items").insert(items as any);
-    return { data: order, error: itemsError };
+    try {
+      const res = await http.post(API_ROUTES.orders, payload);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 
   async updateStatus(id: string, status: OrderStatus) {
-    const supabase = getBrowserClient();
-    return supabase.from("orders").update({ status }).eq("id", id).select().single();
+    try {
+      const res = await http.patch(API_ROUTES.orderById(id), { status });
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
   },
 };

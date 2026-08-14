@@ -75,13 +75,13 @@ export function ReportsView({ role }: ReportsViewProps) {
         Awaited<ReturnType<typeof reportsService.getProductSales>> | undefined,
       ];
 
-    const revenueRows = revenueResult.data ?? [];
+    const revenueRows = (revenueResult.data ?? []) as Array<{ price: number; discount: number; starts_at: string }>;
     const aptRows = (appointmentResult.data ?? []) as Array<{ starts_at: string; status: string }>;
     const clientRows = clientResult.data ?? [];
     const orderRows = (orderRevenueResult.data ?? []) as Array<{ total_amount: number; created_at: string }>;
 
     const appointmentRevenue = revenueRows.reduce(
-      (sum, r) => sum + ((r.price as number) - (r.discount as number)),
+      (sum: number, r) => sum + (r.price - r.discount),
       0,
     );
     const orderRevenue = orderRows.reduce((sum, o) => sum + (o.total_amount ?? 0), 0);
@@ -90,11 +90,11 @@ export function ReportsView({ role }: ReportsViewProps) {
     // Build merged chart data keyed by date
     const revenueByDate = new Map<string, { appointments: number; products: number }>();
     revenueRows.forEach((r) => {
-      const d = formatDate(r.starts_at as string, "MMM d");
+      const d = formatDate(r.starts_at, "MMM d");
       const existing = revenueByDate.get(d) ?? { appointments: 0, products: 0 };
       revenueByDate.set(d, {
         ...existing,
-        appointments: existing.appointments + ((r.price as number) - (r.discount as number)),
+        appointments: existing.appointments + (r.price - r.discount),
       });
     });
     orderRows.forEach((o) => {
