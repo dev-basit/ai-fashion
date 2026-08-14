@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-handlers";
-import { getAdminClient } from "@/services/supabase-admin";
 
-export const GET = withAuth(async (_request, _auth, { params }) => {
+export const GET = withAuth(async (_request, { supabase }, { params }) => {
   const { id } = await params;
-  const { data, error } = await getAdminClient()
+  const { data, error } = await supabase
     .from("staff_profiles")
     .select("*, profiles(*), staff_services(services(*))")
     .eq("id", id)

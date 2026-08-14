@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/api-handlers";
-import { getAdminClient } from "@/services/supabase-admin";
+import { withAdmin } from "@/lib/api-handlers";
 
-export const GET = withAuth(async (request: NextRequest) => {
+export const GET = withAdmin(async (request: NextRequest, { supabase }) => {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const from = searchParams.get("from") ?? new Date(0).toISOString();
   const to = searchParams.get("to") ?? new Date().toISOString();
-  const db = getAdminClient();
+  const db = supabase;
 
   if (type === "revenue") {
     const { data, error } = await db
