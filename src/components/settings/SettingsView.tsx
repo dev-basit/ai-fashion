@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { settingsService } from "@/services/settings.service";
-import { profilesService } from "@/services/profiles.service";
-import { staffService } from "@/services/staff.service";
+import { useState, useEffect } from "react";
+import { useAllProfiles, useUpdateProfile } from "@/hooks/useProfiles";
+import { useSetting, useUpdateSetting } from "@/hooks/useSettings";
+import { useStaffByProfile } from "@/hooks/useStaff";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,37 +16,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 import { StaffScheduleGrid } from "@/components/staff/StaffScheduleGrid";
 import type { SettingsViewProps } from "@/types/props";
-import type { Profile, UserRole } from "@/types/database";
+import type { UserRole } from "@/types/database";
 
 
 function UsersTab() {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: users = [], isLoading } = useAllProfiles();
+  const updateProfile = useUpdateProfile();
   const [saving, setSaving] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const { data } = await profilesService.getAll();
-    setUsers(data ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const changeRole = async (userId: string, role: UserRole) => {
+  const changeRole = (userId: string, role: UserRole) => {
     setSaving(userId);
-    await profilesService.update(userId, { role });
-    setSaving(null);
-    load();
+    updateProfile.mutate({ id: userId, role }, { onSuccess: () => setSaving(null) });
   };
 
-  const deactivate = async (userId: string) => {
-    await profilesService.update(userId, { is_active: false });
-    load();
+  const deactivate = (userId: string) => {
+    updateProfile.mutate({ id: userId, is_active: false });
   };
 
-  if (loading) return <PageLoading />;
+  if (isLoading) return <PageLoading />;
 
   return (
     <Card>
@@ -94,38 +81,36 @@ function UsersTab() {
 }
 
 function NotificationsTab() {
+  const { data: setting, isLoading } = useSetting("notification_settings");
+  const updateSetting = useUpdateSetting();
+
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [reminderHours, setReminderHours] = useState("24");
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await settingsService.get("notification_settings");
-        if (data?.value) {
-          const v = data.value as { email?: boolean; sms?: boolean; reminder_hours?: number };
-          if (v.email !== undefined) setEmailEnabled(v.email);
-          if (v.sms !== undefined) setSmsEnabled(v.sms);
-          if (v.reminder_hours !== undefined) setReminderHours(String(v.reminder_hours));
-        }
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
+    if (setting?.value) {
+      const v = setting.value as { email?: boolean; sms?: boolean; reminder_hours?: number };
+      if (v.email !== undefined) setEmailEnabled(v.email);
+      if (v.sms !== undefined) setSmsEnabled(v.sms);
+      if (v.reminder_hours !== undefined) setReminderHours(String(v.reminder_hours));
+    }
+  }, [setting]);
 
-  const save = async () => {
-    setSaving(true);
-    await settingsService.update("notification_settings", {
-      email: emailEnabled,
-      sms: smsEnabled,
-      reminder_hours: Number(reminderHours),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setSaving(false);
+  const save = () => {
+    updateSetting.mutate(
+      { key: "notification_settings", value: { email: emailEnabled, sms: smsEnabled, reminder_hours: Number(reminderHours) } },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
+
+  if (isLoading) return <PageLoading />;
 
   return (
     <Card>
@@ -158,8 +143,8 @@ function NotificationsTab() {
             className="w-24"
           />
         </div>
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving..." : saved ? "Saved!" : "Save"}
+        <Button onClick={save} disabled={updateSetting.isPending}>
+          {updateSetting.isPending ? "Saving..." : saved ? "Saved!" : "Save"}
         </Button>
       </CardContent>
     </Card>
@@ -167,32 +152,34 @@ function NotificationsTab() {
 }
 
 function WorkingHoursTab() {
+  const { data: setting, isLoading } = useSetting("working_hours");
+  const updateSetting = useUpdateSetting();
+
   const [opening, setOpening] = useState("09:00");
   const [closing, setClosing] = useState("18:00");
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await settingsService.get("working_hours");
-        if (data?.value) {
-          const v = data.value as { opening?: string; closing?: string };
-          if (v.opening) setOpening(v.opening);
-          if (v.closing) setClosing(v.closing);
-        }
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
+    if (setting?.value) {
+      const v = setting.value as { opening?: string; closing?: string };
+      if (v.opening) setOpening(v.opening);
+      if (v.closing) setClosing(v.closing);
+    }
+  }, [setting]);
 
-  const save = async () => {
-    setSaving(true);
-    await settingsService.update("working_hours", { opening, closing });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setSaving(false);
+  const save = () => {
+    updateSetting.mutate(
+      { key: "working_hours", value: { opening, closing } },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
+
+  if (isLoading) return <PageLoading />;
 
   return (
     <Card>
@@ -210,8 +197,8 @@ function WorkingHoursTab() {
             <Input type="time" value={closing} onChange={(e) => setClosing(e.target.value)} />
           </div>
         </div>
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving..." : saved ? "Saved!" : "Save"}
+        <Button onClick={save} disabled={updateSetting.isPending}>
+          {updateSetting.isPending ? "Saving..." : saved ? "Saved!" : "Save"}
         </Button>
       </CardContent>
     </Card>
@@ -219,19 +206,10 @@ function WorkingHoursTab() {
 }
 
 function StaffScheduleTab({ profileId }: { profileId: string }) {
-  const [staffProfileId, setStaffProfileId] = useState<string | null>(null);
+  const { data: staffData, isLoading } = useStaffByProfile(profileId);
+  const staffProfileId = staffData && staffData.length > 0 ? staffData[0].id : null;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await staffService.getByProfileId(profileId);
-        if (data && data.length > 0) setStaffProfileId(data[0].id);
-      } catch { /* ignore */ }
-    };
-    load();
-  }, [profileId]);
-
-  if (!staffProfileId) return <PageLoading />;
+  if (isLoading || !staffProfileId) return <PageLoading />;
 
   return (
     <Card>
@@ -246,54 +224,45 @@ function StaffScheduleTab({ profileId }: { profileId: string }) {
 }
 
 export function SettingsView({ profile }: SettingsViewProps) {
+  const { data: businessSetting, isLoading: loadingBusiness } = useSetting("business_profile");
+  const updateSetting = useUpdateSetting();
+  const updateProfile = useUpdateProfile();
+
   const [businessName, setBusinessName] = useState("");
   const [businessPhone, setBusinessPhone] = useState("");
   const [businessEmail, setBusinessEmail] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
 
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
-  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await settingsService.get("business_profile");
-        if (data) {
-          const val = data.value as { name?: string; phone?: string; email?: string };
-          setBusinessName(val.name ?? "");
-          setBusinessPhone(val.phone ?? "");
-          setBusinessEmail(val.email ?? "");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
+    if (businessSetting?.value) {
+      const val = businessSetting.value as { name?: string; phone?: string; email?: string };
+      setBusinessName(val.name ?? "");
+      setBusinessPhone(val.phone ?? "");
+      setBusinessEmail(val.email ?? "");
+    }
+  }, [businessSetting]);
 
-  const saveBusinessProfile = async () => {
-    setSaving(true);
-    await settingsService.update("business_profile", {
-      name: businessName,
-      phone: businessPhone,
-      email: businessEmail,
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    setSaving(false);
+  const saveBusinessProfile = () => {
+    updateSetting.mutate(
+      { key: "business_profile", value: { name: businessName, phone: businessPhone, email: businessEmail } },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
+    );
   };
 
-  const saveProfile = async () => {
+  const saveProfile = () => {
     if (!profile) return;
-    setSavingProfile(true);
-    await profilesService.update(profile.id, { full_name: fullName, phone });
-    setSavingProfile(false);
+    updateProfile.mutate({ id: profile.id, full_name: fullName, phone });
   };
 
-  if (loading) return <PageLoading />;
+  if (loadingBusiness) return <PageLoading />;
 
   const isAdmin = profile?.role === "admin";
   const isStaff = profile?.role === "staff";
@@ -345,8 +314,8 @@ export function SettingsView({ profile }: SettingsViewProps) {
                     placeholder="contact@salon.com"
                   />
                 </div>
-                <Button onClick={saveBusinessProfile} disabled={saving}>
-                  {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+                <Button onClick={saveBusinessProfile} disabled={updateSetting.isPending}>
+                  {updateSetting.isPending ? "Saving..." : saved ? "Saved!" : "Save Changes"}
                 </Button>
               </CardContent>
             </Card>
@@ -391,8 +360,8 @@ export function SettingsView({ profile }: SettingsViewProps) {
                 <Label>Phone</Label>
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
               </div>
-              <Button onClick={saveProfile} disabled={savingProfile}>
-                {savingProfile ? "Saving..." : "Save Profile"}
+              <Button onClick={saveProfile} disabled={updateProfile.isPending}>
+                {updateProfile.isPending ? "Saving..." : "Save Profile"}
               </Button>
             </CardContent>
           </Card>

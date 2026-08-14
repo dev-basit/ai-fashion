@@ -17,7 +17,8 @@ import { formatInitials } from "@/utils/format";
 import type { StaffProfile } from "@/types/database";
 
 export function StaffView() {
-  const { staff, isLoading, refetch } = useStaff();
+  const { data: staffRaw, isLoading } = useStaff();
+  const staff = (staffRaw ?? []) as StaffProfile[];
   const [showForm, setShowForm] = useState(false);
 
   if (isLoading) return <PageLoading />;
@@ -95,10 +96,7 @@ export function StaffView() {
             <DialogTitle>Add Staff Member</DialogTitle>
           </DialogHeader>
           <StaffForm
-            onSuccess={() => {
-              setShowForm(false);
-              refetch();
-            }}
+            onSuccess={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
           />
         </DialogContent>

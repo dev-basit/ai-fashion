@@ -2,9 +2,9 @@
 
 import type { StaffLeaveCalendarProps } from "@/types/props";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Plus, CalendarOff } from "lucide-react";
-import { staffService } from "@/services/staff.service";
+import { useStaffLeaves, useCreateLeave } from "@/hooks/useStaff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,39 +14,28 @@ import type { StaffLeave } from "@/types/database";
 
 
 export function StaffLeaveCalendar({ staffProfileId, editable = true }: StaffLeaveCalendarProps) {
-  const [leaves, setLeaves] = useState<StaffLeave[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await staffService.getLeaves(staffProfileId);
-      setLeaves((data as StaffLeave[]) ?? []);
-    } catch { /* ignore */ }
-  }, [staffProfileId]);
+  const { data: leavesRaw } = useStaffLeaves(staffProfileId);
+  const leaves = (leavesRaw ?? []) as StaffLeave[];
+  const createLeave = useCreateLeave();
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const add = async () => {
+  const add = () => {
     if (!start || !end) return;
-    setSaving(true);
-    await staffService.createLeave({
-      staff_profile_id: staffProfileId,
-      starts_at: start,
-      ends_at: end,
-      reason: reason || undefined,
-    });
-    setStart("");
-    setEnd("");
-    setReason("");
-    setSaving(false);
-    setShowForm(false);
-    load();
+    createLeave.mutate(
+      { staff_profile_id: staffProfileId, starts_at: start, ends_at: end, reason: reason || undefined },
+      {
+        onSuccess: () => {
+          setStart("");
+          setEnd("");
+          setReason("");
+          setShowForm(false);
+        },
+      },
+    );
   };
 
   return (
@@ -93,8 +82,8 @@ export function StaffLeaveCalendar({ staffProfileId, editable = true }: StaffLea
             <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
               Cancel
             </Button>
-            <Button size="sm" onClick={add} disabled={saving || !start || !end}>
-              {saving ? "Saving..." : "Add"}
+            <Button size="sm" onClick={add} disabled={createLeave.isPending || !start || !end}>
+              {createLeave.isPending ? "Saving..." : "Add"}
             </Button>
           </div>
         </div>

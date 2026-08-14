@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/constants";
 import { ArrowLeft, Calendar, ShoppingBag, ClipboardList, FileText, Pencil, UserX, Plus } from "lucide-react";
 import Link from "next/link";
-import { clientsService } from "@/services/clients.service";
-import { consultationService } from "@/services/consultation.service";
+import { useClientHistory, useDeactivateClient } from "@/hooks/useClients";
+import { useCreateConsultationRecord } from "@/hooks/useConsultation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,73 +31,61 @@ import type {
 
 export function ClientProfileView({ client, role, staffProfileId }: ClientProfileViewProps) {
   const router = useRouter();
-  const [history, setHistory] = useState<{
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDeactivate, setShowDeactivate] = useState(false);
+  const [showNote, setShowNote] = useState(false);
+  const [noteObs, setNoteObs] = useState("");
+  const [noteRecs, setNoteRecs] = useState("");
+
+  const isStaffOrAdmin = role === "staff" || role === "admin";
+
+  const { data: historyRaw, isLoading } = useClientHistory(client.id);
+  const history = historyRaw as {
     appointments?: Appointment[];
     orders?: Order[];
     consultations?: ConsultationRecord[];
     plans?: ClientTreatmentPlan[];
-  }>({});
-  const [loading, setLoading] = useState(true);
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDeactivate, setShowDeactivate] = useState(false);
-  const [deactivating, setDeactivating] = useState(false);
-  const [showNote, setShowNote] = useState(false);
-  const [noteObs, setNoteObs] = useState("");
-  const [noteRecs, setNoteRecs] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
+  } | null;
 
-  const isStaffOrAdmin = role === "staff" || role === "admin";
+  const deactivateClient = useDeactivateClient();
+  const createNote = useCreateConsultationRecord();
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const { data } = await clientsService.getClientHistory(client.id);
-      setHistory({
-        appointments: (data?.appointments as unknown as Appointment[]) ?? undefined,
-        orders: (data?.orders as unknown as Order[]) ?? undefined,
-        consultations: (data?.consultations as unknown as ConsultationRecord[]) ?? undefined,
-        plans: (data?.plans as unknown as ClientTreatmentPlan[]) ?? undefined,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [client.id]);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
-
-  const handleDeactivate = async () => {
-    setDeactivating(true);
-    await clientsService.deactivate(client.id);
-    setDeactivating(false);
-    setShowDeactivate(false);
-    router.push(ROUTES.clients);
-    router.refresh();
-  };
-
-  const handleAddNote = async () => {
-    if (!noteObs.trim()) return;
-    setSavingNote(true);
-    await consultationService.createRecord({
-      client_id: client.id,
-      staff_profile_id: staffProfileId ?? null,
-      observations: noteObs.trim(),
-      recommendations: noteRecs.trim()
-        ? noteRecs
-            .split("\n")
-            .map((r) => r.trim())
-            .filter(Boolean)
-        : null,
-      submitted_at: new Date().toISOString(),
+  const handleDeactivate = () => {
+    deactivateClient.mutate(client.id, {
+      onSuccess: () => {
+        setShowDeactivate(false);
+        router.push(ROUTES.clients);
+        router.refresh();
+      },
     });
-    setSavingNote(false);
-    setShowNote(false);
-    setNoteObs("");
-    setNoteRecs("");
-    loadHistory();
   };
 
-  if (loading) return <PageLoading />;
+  const handleAddNote = () => {
+    if (!noteObs.trim()) return;
+    createNote.mutate(
+      {
+        client_id: client.id,
+        staff_profile_id: staffProfileId ?? null,
+        observations: noteObs.trim(),
+        recommendations: noteRecs.trim()
+          ? noteRecs
+              .split("\n")
+              .map((r) => r.trim())
+              .filter(Boolean)
+          : null,
+        submitted_at: new Date().toISOString(),
+      },
+      {
+        onSuccess: () => {
+          setShowNote(false);
+          setNoteObs("");
+          setNoteRecs("");
+        },
+      },
+    );
+  };
+
+  if (isLoading) return <PageLoading />;
 
   return (
     <div className="space-y-6">
@@ -152,27 +140,27 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
         <TabsList>
           <TabsTrigger value="appointments">
             <Calendar className="h-4 w-4 mr-1" />
-            Appointments ({history.appointments?.length ?? 0})
+            Appointments ({history?.appointments?.length ?? 0})
           </TabsTrigger>
           {role !== "staff" && (
             <TabsTrigger value="orders">
               <ShoppingBag className="h-4 w-4 mr-1" />
-              Orders ({history.orders?.length ?? 0})
+              Orders ({history?.orders?.length ?? 0})
             </TabsTrigger>
           )}
           <TabsTrigger value="consultations">
             <ClipboardList className="h-4 w-4 mr-1" />
-            Consultations ({history.consultations?.length ?? 0})
+            Consultations ({history?.consultations?.length ?? 0})
           </TabsTrigger>
           <TabsTrigger value="plans">
             <FileText className="h-4 w-4 mr-1" />
-            Plans ({history.plans?.length ?? 0})
+            Plans ({history?.plans?.length ?? 0})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="appointments" className="mt-4">
           <div className="space-y-3">
-            {(history.appointments ?? []).map((apt) => (
+            {(history?.appointments ?? []).map((apt) => (
               <Card key={apt.id}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
@@ -190,7 +178,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
                 </CardContent>
               </Card>
             ))}
-            {!history.appointments?.length && (
+            {!history?.appointments?.length && (
               <p className="text-center text-sm text-muted-foreground py-8">No appointments yet</p>
             )}
           </div>
@@ -199,7 +187,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
         {role !== "staff" && (
           <TabsContent value="orders" className="mt-4">
             <div className="space-y-3">
-              {(history.orders ?? []).map((order) => (
+              {(history?.orders ?? []).map((order) => (
                 <Card key={order.id}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div>
@@ -210,7 +198,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
                   </CardContent>
                 </Card>
               ))}
-              {!history.orders?.length && (
+              {!history?.orders?.length && (
                 <p className="text-center text-sm text-muted-foreground py-8">No orders yet</p>
               )}
             </div>
@@ -219,7 +207,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
 
         <TabsContent value="consultations" className="mt-4">
           <div className="space-y-3">
-            {(history.consultations ?? []).map((c) => (
+            {(history?.consultations ?? []).map((c) => (
               <Card key={c.id}>
                 <CardContent className="p-4">
                   <p className="font-medium text-sm">
@@ -243,7 +231,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
                 </CardContent>
               </Card>
             ))}
-            {!history.consultations?.length && (
+            {!history?.consultations?.length && (
               <p className="text-center text-sm text-muted-foreground py-8">No consultations yet</p>
             )}
           </div>
@@ -251,7 +239,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
 
         <TabsContent value="plans" className="mt-4">
           <div className="space-y-3">
-            {(history.plans ?? []).map((plan) => (
+            {(history?.plans ?? []).map((plan) => (
               <Card key={plan.id}>
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
@@ -262,7 +250,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
                 </CardContent>
               </Card>
             ))}
-            {!history.plans?.length && (
+            {!history?.plans?.length && (
               <p className="text-center text-sm text-muted-foreground py-8">No treatment plans yet</p>
             )}
           </div>
@@ -310,11 +298,11 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
               />
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowNote(false)} disabled={savingNote}>
+              <Button variant="outline" onClick={() => setShowNote(false)} disabled={createNote.isPending}>
                 Cancel
               </Button>
-              <Button onClick={handleAddNote} disabled={savingNote || !noteObs.trim()}>
-                {savingNote ? "Saving..." : "Add Note"}
+              <Button onClick={handleAddNote} disabled={createNote.isPending || !noteObs.trim()}>
+                {createNote.isPending ? "Saving..." : "Add Note"}
               </Button>
             </div>
           </div>
@@ -328,7 +316,7 @@ export function ClientProfileView({ client, role, staffProfileId }: ClientProfil
         description="This client will be hidden from the active list. This can be reversed in the database."
         confirmLabel="Deactivate"
         destructive
-        loading={deactivating}
+        loading={deactivateClient.isPending}
         onConfirm={handleDeactivate}
       />
     </div>

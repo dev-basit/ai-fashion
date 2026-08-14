@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search } from "lucide-react";
-import { chatService } from "@/services/chat.service";
+import { useChatRecipients } from "@/hooks/useChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,19 +13,10 @@ import type { Profile } from "@/types/database";
 
 export function NewConversationDialog({ onCreated, onCancel }: NewConversationDialogProps) {
   const [search, setSearch] = useState("");
-  const [recipients, setRecipients] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: recipientsRaw, isLoading: loading } = useChatRecipients();
+  const recipients = (recipientsRaw ?? []) as Profile[];
   const [creating, setCreating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      const { data } = await chatService.getRecipients();
-      setRecipients((data ?? []) as Profile[]);
-      setLoading(false);
-    }
-    load();
-  }, []);
 
   const filtered = search
     ? recipients.filter((r) => r.full_name?.toLowerCase().includes(search.toLowerCase()))

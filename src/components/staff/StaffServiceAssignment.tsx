@@ -3,32 +3,29 @@
 import type { StaffServiceAssignmentProps } from "@/types/props";
 
 import { useState, useEffect } from "react";
-import { staffService } from "@/services/staff.service";
-import { servicesService } from "@/services/services.service";
+import { useStaffMember, useAssignService, useRemoveService } from "@/hooks/useStaff";
+import { useServices } from "@/hooks/useServices";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Service } from "@/types/database";
 
 export function StaffServiceAssignment({ staffProfileId, editable = true }: StaffServiceAssignmentProps) {
-  const [services, setServices] = useState<Service[]>([]);
   const [assigned, setAssigned] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [{ data: svcData }, { data: staffData }] = await Promise.all([
-          servicesService.getAllServices(),
-          staffService.getById(staffProfileId),
-        ]);
-        setServices((svcData as unknown as Service[]) ?? []);
-        const rows =
-          (staffData as { staff_services?: { services?: { id: string } }[] } | null)?.staff_services ?? [];
-        setAssigned(new Set(rows.map((r) => r.services?.id).filter(Boolean) as string[]));
-      } catch { /* ignore */ }
-    };
-    load();
-  }, [staffProfileId]);
+  const { data: staffData } = useStaffMember(staffProfileId);
+  const { data: servicesRaw } = useServices();
+  const services = (servicesRaw ?? []) as Service[];
+  const assignService = useAssignService();
+  const removeService = useRemoveService();
 
-  const toggle = async (serviceId: string, checked: boolean) => {
+  useEffect(() => {
+    if (staffData) {
+      const rows =
+        (staffData as { staff_services?: { services?: { id: string } }[] } | null)?.staff_services ?? [];
+      setAssigned(new Set(rows.map((r) => r.services?.id).filter(Boolean) as string[]));
+    }
+  }, [staffData]);
+
+  const toggle = (serviceId: string, checked: boolean) => {
     if (!editable) return;
     setAssigned((prev) => {
       const next = new Set(prev);
@@ -36,8 +33,8 @@ export function StaffServiceAssignment({ staffProfileId, editable = true }: Staf
       else next.delete(serviceId);
       return next;
     });
-    if (checked) await staffService.assignService(staffProfileId, serviceId);
-    else await staffService.removeService(staffProfileId, serviceId);
+    if (checked) assignService.mutate({ staffProfileId, serviceId });
+    else removeService.mutate({ staffProfileId, serviceId });
   };
 
   if (services.length === 0) return <p className="text-sm text-muted-foreground">No services available.</p>;

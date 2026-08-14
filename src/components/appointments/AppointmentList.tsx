@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Calendar, Clock, ChevronDown } from "lucide-react";
-import { appointmentsService } from "@/services/appointments.service";
+import { useUpdateAppointmentStatus } from "@/hooks/useAppointments";
 import { formatDate, formatTime, formatDuration } from "@/utils/date";
 import { formatCurrency } from "@/utils/format";
 import { AppointmentStatusBadge, PaymentStatusBadge } from "@/components/common/StatusBadge";
@@ -24,12 +24,11 @@ import type { Appointment, AppointmentStatus } from "@/types/database";
 
 export function AppointmentList({ appointments, isLoading, role, onRefresh }: AppointmentListProps) {
   const [updating, setUpdating] = useState<string | null>(null);
+  const updateStatusMutation = useUpdateAppointmentStatus();
 
-  const updateStatus = async (id: string, status: AppointmentStatus) => {
+  const updateStatus = (id: string, status: AppointmentStatus) => {
     setUpdating(id);
-    await appointmentsService.updateStatus(id, status);
-    onRefresh();
-    setUpdating(null);
+    updateStatusMutation.mutate({ id, status }, { onSuccess: () => { setUpdating(null); onRefresh(); } });
   };
 
   if (isLoading) return <PageLoading />;

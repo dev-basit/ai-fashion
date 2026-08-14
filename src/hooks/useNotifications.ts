@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QK } from "@/config/query";
 import { notificationsService } from "@/services/notifications.service";
 import { useRealtime } from "./useRealtime";
 import { useAuth } from "./useAuth";
@@ -8,47 +9,50 @@ import type { Notification } from "@/types/database";
 
 export function useNotifications() {
   const { profile } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const qc = useQueryClient();
 
-  useEffect(() => {
-    if (!profile?.id) return;
-    const load = async () => {
-      try {
-        const { data } = await notificationsService.getAll(profile.id);
-        if (data) {
-          const typed = data as unknown as Notification[];
-          setNotifications(typed);
-          setUnreadCount(typed.filter((n) => !n.is_read).length);
-        }
-      } catch { /* ignore */ }
-    };
-    load();
-  }, [profile?.id]);
+  const query = useQuery({
+    queryKey: QK.notifications(),
+    queryFn: async () => {
+      const { data, error } = await notificationsService.getAll(profile!.id);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as unknown as Notification[];
+    },
+    enabled: !!profile?.id,
+  });
 
   useRealtime({
     table: "notifications",
     filter: profile?.id ? `profile_id=eq.${profile.id}` : undefined,
     enabled: !!profile?.id,
-    onInsert: (payload) => {
-      const notification = payload as unknown as Notification;
-      setNotifications((prev) => [notification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
-    },
+    onInsert: () => qc.invalidateQueries({ queryKey: QK.notifications() }),
+    onUpdate: () => qc.invalidateQueries({ queryKey: QK.notifications() }),
   });
 
-  const markAsRead = async (id: string) => {
-    await notificationsService.markAsRead(id);
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
-    setUnreadCount((prev) => Math.max(0, prev - 1));
-  };
+  const markAsRead = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await notificationsService.markAsRead(id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.notifications() }),
+  });
 
-  const markAllAsRead = async () => {
-    if (!profile?.id) return;
-    await notificationsService.markAllAsRead(profile.id);
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    setUnreadCount(0);
-  };
+  const markAllAsRead = useMutation({
+    mutationFn: async () => {
+      if (!profile?.id) return;
+      const { error } = await notificationsService.markAllAsRead(profile.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: QK.notifications() }),
+  });
 
-  return { notifications, unreadCount, markAsRead, markAllAsRead };
+  const notifications = (query.data ?? []) as Notification[];
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  return {
+    notifications,
+    unreadCount,
+    markAsRead: (id: string) => markAsRead.mutate(id),
+    markAllAsRead: () => markAllAsRead.mutate(),
+  };
 }

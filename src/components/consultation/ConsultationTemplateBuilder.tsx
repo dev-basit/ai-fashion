@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
-import { consultationService } from "@/services/consultation.service";
+import { useCreateConsultationTemplate, useUpdateConsultationTemplate } from "@/hooks/useConsultation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,24 +24,26 @@ export function ConsultationTemplateBuilder({ template, onSuccess, onCancel }: C
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
   const [fields, setFields] = useState<ConsultationField[]>(template?.fields ?? [newField()]);
-  const [saving, setSaving] = useState(false);
+  const createTemplate = useCreateConsultationTemplate();
+  const updateTemplate = useUpdateConsultationTemplate();
+  const saving = createTemplate.isPending || updateTemplate.isPending;
 
   const updateField = (id: string, patch: Partial<ConsultationField>) =>
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
 
-  const save = async () => {
-    setSaving(true);
+  const save = () => {
     const cleanFields = fields
       .filter((f) => f.label.trim())
       .map((f) => ({
         ...f,
-        options: ["select", "radio", "checkbox"].includes(f.type) ? f.options : undefined
+        options: ["select", "radio", "checkbox"].includes(f.type) ? f.options : undefined,
       }));
     const payload = { name, description: description || null, fields: cleanFields, is_active: true };
-    if (isEdit) await consultationService.updateTemplate(template!.id, payload);
-    else await consultationService.createTemplate(payload);
-    setSaving(false);
-    onSuccess();
+    if (isEdit) {
+      updateTemplate.mutate({ id: template!.id, ...payload }, { onSuccess });
+    } else {
+      createTemplate.mutate(payload, { onSuccess });
+    }
   };
 
   return (

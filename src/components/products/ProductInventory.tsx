@@ -1,27 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { productsService } from "@/services/products.service";
+import { useUpdateProductStock } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import type { ProductInventoryProps } from "@/types/props";
 
-export function ProductInventory({ products, onRefetch }: ProductInventoryProps) {
+export function ProductInventory({ products, onRefetch: _ }: ProductInventoryProps) {
   const [editing, setEditing] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const updateStock = useUpdateProductStock();
 
-  const handleSave = async (productId: string) => {
+  const handleSave = (productId: string) => {
     const qty = Number(editing[productId]);
     if (isNaN(qty) || qty < 0) return;
     setSaving(productId);
-    await productsService.updateStock(productId, qty);
-    setSaving(null);
-    const updated = { ...editing };
-    delete updated[productId];
-    setEditing(updated);
-    onRefetch();
+    updateStock.mutate(
+      { id: productId, quantity: qty },
+      {
+        onSuccess: () => {
+          setSaving(null);
+          setEditing((prev) => {
+            const updated = { ...prev };
+            delete updated[productId];
+            return updated;
+          });
+        },
+      },
+    );
   };
 
   return (

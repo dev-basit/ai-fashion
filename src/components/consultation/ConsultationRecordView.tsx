@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/config/constants";
-import { consultationService } from "@/services/consultation.service";
+import { useConsultationRecord, useUpdateConsultationRecord } from "@/hooks/useConsultation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,32 +15,25 @@ import type { ConsultationRecordViewProps } from "@/types/props";
 import type { ConsultationRecord, ConsultationFormTemplate } from "@/types/database";
 
 export function ConsultationRecordView({ recordId, role }: ConsultationRecordViewProps) {
-  const [record, setRecord] = useState<ConsultationRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: recordRaw, isLoading } = useConsultationRecord(recordId);
+  const record = recordRaw as unknown as ConsultationRecord | null;
+  const updateRecord = useUpdateConsultationRecord();
+
   const [observations, setObservations] = useState("");
   const [recommendations, setRecommendations] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const isStaffOrAdmin = role === "staff" || role === "admin";
 
-  const load = useCallback(async () => {
-    const { data } = await consultationService.getRecordById(recordId);
-    if (data) {
-      const r = data as unknown as ConsultationRecord;
-      setRecord(r);
-      setObservations(r.observations ?? "");
-      setRecommendations((r.recommendations ?? []).join("\n"));
-    }
-    setLoading(false);
-  }, [recordId]);
-
   useEffect(() => {
-    load();
-  }, [load]);
+    if (record) {
+      setObservations(record.observations ?? "");
+      setRecommendations((record.recommendations ?? []).join("\n"));
+    }
+  }, [record]);
 
-  const save = async () => {
-    setSaving(true);
-    await consultationService.updateRecord(recordId, {
+  const save = () => {
+    updateRecord.mutate({
+      id: recordId,
       observations: observations || null,
       recommendations: recommendations.trim()
         ? recommendations
@@ -49,11 +42,9 @@ export function ConsultationRecordView({ recordId, role }: ConsultationRecordVie
             .filter(Boolean)
         : null,
     });
-    setSaving(false);
-    load();
   };
 
-  if (loading || !record) return <PageLoading />;
+  if (isLoading || !record) return <PageLoading />;
 
   const ext = record as ConsultationRecord & {
     profiles?: { full_name?: string };
@@ -119,8 +110,8 @@ export function ConsultationRecordView({ recordId, role }: ConsultationRecordVie
                 <Label className="text-xs">Recommendations (one per line)</Label>
                 <Textarea rows={3} value={recommendations} onChange={(e) => setRecommendations(e.target.value)} />
               </div>
-              <Button size="sm" onClick={save} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
+              <Button size="sm" onClick={save} disabled={updateRecord.isPending}>
+                {updateRecord.isPending ? "Saving..." : "Save"}
               </Button>
             </>
           ) : (

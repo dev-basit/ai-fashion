@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useAppointmentsStore } from "@/store/appointments.store";
-import { staffService } from "@/services/staff.service";
-import { servicesService } from "@/services/services.service";
+import { useStaff } from "@/hooks/useStaff";
+import { useServices } from "@/hooks/useServices";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -21,22 +20,11 @@ export function AppointmentFilters({ showProvider = true }: { showProvider?: boo
     setServiceFilter,
     resetFilters,
   } = useAppointmentsStore();
-  const [staff, setStaff] = useState<StaffProfile[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        if (showProvider) {
-          const { data } = await staffService.getAll();
-          setStaff((data as unknown as StaffProfile[]) ?? []);
-        }
-        const { data: svcData } = await servicesService.getAllServices();
-        setServices((svcData as unknown as Service[]) ?? []);
-      } catch { /* ignore */ }
-    };
-    load();
-  }, [showProvider]);
+  const { data: staffRaw } = useStaff();
+  const staff = (staffRaw ?? []) as StaffProfile[];
+  const { data: servicesRaw } = useServices();
+  const services = (servicesRaw ?? []) as Service[];
 
   const hasFilters = statusFilter !== "all" || !!staffFilter || !!serviceFilter;
 

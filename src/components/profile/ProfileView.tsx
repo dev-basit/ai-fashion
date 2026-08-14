@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { User, Mail, Phone, Calendar, Shield, Pencil, Check, X } from "lucide-react";
-import { profilesService } from "@/services/profiles.service";
+import { useUpdateProfile } from "@/hooks/useProfiles";
 import { useAuthStore } from "@/store/auth.store";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,22 +22,24 @@ export function ProfileView({ profile: initialProfile, email }: ProfileViewProps
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(initialProfile?.full_name ?? "");
   const [phone, setPhone] = useState(initialProfile?.phone ?? "");
-  const [saving, setSaving] = useState(false);
   const setStoreProfile = useAuthStore((s) => s.setProfile);
+  const updateProfile = useUpdateProfile();
 
   const save = async () => {
     if (!profile) return;
-    setSaving(true);
-    const { data } = await profilesService.update(profile.id, {
-      full_name: fullName.trim() || null,
-      phone: phone.trim() || null,
-    });
-    if (data) {
-      setProfile(data);
-      setStoreProfile(data);
+    try {
+      const updated = await updateProfile.mutateAsync({
+        id: profile.id,
+        full_name: fullName.trim() || null,
+        phone: phone.trim() || null,
+      });
+      if (updated) {
+        setProfile(updated as Profile);
+        setStoreProfile(updated as Profile);
+      }
+    } finally {
+      setEditing(false);
     }
-    setSaving(false);
-    setEditing(false);
   };
 
   const cancel = () => {
@@ -133,11 +135,11 @@ export function ProfileView({ profile: initialProfile, email }: ProfileViewProps
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={save} disabled={saving}>
+                <Button size="sm" onClick={save} disabled={updateProfile.isPending}>
                   <Check className="h-3.5 w-3.5 mr-1.5" />
-                  {saving ? "Saving..." : "Save"}
+                  {updateProfile.isPending ? "Saving..." : "Save"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={cancel} disabled={saving}>
+                <Button size="sm" variant="outline" onClick={cancel} disabled={updateProfile.isPending}>
                   <X className="h-3.5 w-3.5 mr-1.5" />
                   Cancel
                 </Button>

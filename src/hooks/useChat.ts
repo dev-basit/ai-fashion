@@ -1,45 +1,66 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getBrowserClient } from "@/services/supabase";
 import { chatService } from "@/services/chat.service";
 import { useChatStore } from "@/store/chat.store";
 import { useAuth } from "./useAuth";
-import type { Message, Conversation } from "@/types/database";
+import { QK } from "@/config/query";
+import type { Conversation, Message } from "@/types/database";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+
+export function useChatRecipients() {
+  return useQuery({
+    queryKey: QK.chatRecipients(),
+    queryFn: async () => {
+      const { data, error } = await chatService.getRecipients();
+      if (error) throw new Error(error.message);
+      return (data ?? []) as import("@/types/database").Profile[];
+    },
+  });
+}
 
 export function useConversations() {
   const { profile } = useAuth();
-  const { conversations, setConversations } = useChatStore();
+  const qc = useQueryClient();
 
-  const refetch = useCallback(async () => {
-    if (!profile?.id) return;
-    const { data } = await chatService.getConversations(profile.id);
-    if (data) setConversations(data as Conversation[]);
-  }, [profile?.id, setConversations]);
+  const query = useQuery({
+    queryKey: QK.chatConversations(),
+    queryFn: async () => {
+      const { data, error } = await chatService.getConversations(profile!.id);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Conversation[];
+    },
+    enabled: !!profile?.id,
+  });
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
-  return { conversations, refetch };
+  return {
+    conversations: query.data ?? [],
+    isLoading: query.isLoading,
+    refetch: () => qc.invalidateQueries({ queryKey: QK.chatConversations() }),
+  };
 }
 
 export function useMessages(conversationId: string | null) {
   const { profile } = useAuth();
-  const { messages, setMessages, addMessage } = useChatStore();
+  const qc = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const { activeConversationId } = useChatStore();
 
+  const query = useQuery({
+    queryKey: QK.chatMessages(conversationId ?? ""),
+    queryFn: async () => {
+      const { data, error } = await chatService.getMessages(conversationId!);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Message[];
+    },
+    enabled: !!conversationId,
+  });
+
+  // Realtime subscription — invalidates the messages query on new inserts
   useEffect(() => {
     if (!conversationId) return;
-
-    const loadMessages = async () => {
-      try {
-        const { data } = await chatService.getMessages(conversationId);
-        if (data) setMessages(conversationId, data as Message[]);
-      } catch { /* ignore */ }
-    };
-    loadMessages();
 
     const supabase = getBrowserClient();
     channelRef.current = supabase
@@ -52,16 +73,13 @@ export function useMessages(conversationId: string | null) {
           table: "messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        async (payload) => {
+        (payload) => {
           const newMessage = payload.new as Message;
+          // Skip own messages — already added optimistically via mutation
           if (newMessage.sender_id !== profile?.id) {
-            const { data } = await supabase
-              .from("messages")
-              .select("*, profiles!sender_id(id, full_name, avatar_url)")
-              .eq("id", newMessage.id)
-              .single();
-            if (data) addMessage(conversationId, data as Message);
+            qc.invalidateQueries({ queryKey: QK.chatMessages(conversationId) });
           }
+          qc.invalidateQueries({ queryKey: QK.chatConversations() });
         },
       )
       .subscribe();
@@ -72,18 +90,28 @@ export function useMessages(conversationId: string | null) {
     };
   }, [conversationId]);
 
-  const sendMessage = async (content: string) => {
-    if (!conversationId || !profile?.id) return;
-    const { data } = await chatService.sendMessage({
-      conversation_id: conversationId,
-      sender_id: profile.id,
-      content,
-    });
-    if (data) addMessage(conversationId, data as Message);
-  };
+  const sendMessage = useMutation({
+    mutationFn: async (content: string) => {
+      if (!conversationId || !profile?.id) throw new Error("Not ready");
+      const { data, error } = await chatService.sendMessage({
+        conversation_id: conversationId,
+        sender_id: profile.id,
+        content,
+      });
+      if (error) throw new Error(error.message);
+      return data as Message;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.chatMessages(conversationId ?? "") });
+      qc.invalidateQueries({ queryKey: QK.chatConversations() });
+    },
+  });
 
   return {
-    messages: messages[conversationId ?? ""] ?? [],
-    sendMessage,
+    messages: query.data ?? [],
+    isLoading: query.isLoading,
+    sendMessage: (content: string) => sendMessage.mutate(content),
+    isSending: sendMessage.isPending,
+    activeConversationId,
   };
 }

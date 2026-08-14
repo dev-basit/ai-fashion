@@ -2,9 +2,9 @@
 
 import type { TreatmentPlanAssignProps } from "@/types/props";
 
-import { useState, useEffect } from "react";
-import { treatmentPlansService } from "@/services/treatment-plans.service";
-import { clientsService } from "@/services/clients.service";
+import { useState } from "react";
+import { useTreatmentPlanTemplates } from "@/hooks/useTreatmentPlans";
+import { useClients } from "@/hooks/useClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,27 +14,15 @@ import { addDays, format } from "date-fns";
 import type { TreatmentPlanTemplate, Profile } from "@/types/database";
 
 export function TreatmentPlanAssign({ assignedBy, onSuccess, onCancel }: TreatmentPlanAssignProps) {
-  const [templates, setTemplates] = useState<TreatmentPlanTemplate[]>([]);
-  const [clients, setClients] = useState<Profile[]>([]);
+  const { data: templatesRaw } = useTreatmentPlanTemplates();
+  const templates = (templatesRaw ?? []) as TreatmentPlanTemplate[];
+  const { data: clientsRaw } = useClients();
+  const clients = (clientsRaw ?? []) as Profile[];
   const [templateId, setTemplateId] = useState("");
   const [clientId, setClientId] = useState("");
   const [startsOn, setStartsOn] = useState(format(new Date(), "yyyy-MM-dd"));
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [{ data: tplData }, { data: clientData }] = await Promise.all([
-          treatmentPlansService.getTemplates(),
-          clientsService.getAll(),
-        ]);
-        setTemplates((tplData as unknown as TreatmentPlanTemplate[]) ?? []);
-        setClients(clientData ?? []);
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
 
   const template = templates.find((t) => t.id === templateId);
 

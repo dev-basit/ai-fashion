@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ROUTES } from "@/config/constants";
 import { ArrowLeft, Pencil, UserX } from "lucide-react";
 import Link from "next/link";
-import { staffService } from "@/services/staff.service";
+import { useSetAvailability, useDeactivateStaffProfile } from "@/hooks/useStaff";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,20 +34,22 @@ export function StaffProfileView({ staffProfile, isOwnProfile, role }: StaffProf
   const [available, setAvailable] = useState(staffProfile.is_available);
   const [showEdit, setShowEdit] = useState(false);
   const [showRemove, setShowRemove] = useState(false);
-  const [removing, setRemoving] = useState(false);
+  const setAvailability = useSetAvailability();
+  const deactivateProfile = useDeactivateStaffProfile();
 
-  const toggleAvailability = async (val: boolean) => {
+  const toggleAvailability = (val: boolean) => {
     setAvailable(val);
-    await staffService.setAvailability(staffProfile.id, val);
+    setAvailability.mutate({ id: staffProfile.id, isAvailable: val });
   };
 
-  const remove = async () => {
-    setRemoving(true);
-    await staffService.deactivateProfile(staffProfile.profile_id);
-    setRemoving(false);
-    setShowRemove(false);
-    router.push(ROUTES.staff);
-    router.refresh();
+  const remove = () => {
+    deactivateProfile.mutate(staffProfile.profile_id, {
+      onSuccess: () => {
+        setShowRemove(false);
+        router.push(ROUTES.staff);
+        router.refresh();
+      },
+    });
   };
 
   return (
@@ -195,7 +197,7 @@ export function StaffProfileView({ staffProfile, isOwnProfile, role }: StaffProf
         description="Their account will be deactivated and they will no longer appear in the active staff list."
         confirmLabel="Remove"
         destructive
-        loading={removing}
+        loading={deactivateProfile.isPending}
         onConfirm={remove}
       />
     </div>

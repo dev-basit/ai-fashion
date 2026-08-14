@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import { Calendar, DollarSign, Users, Clock } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/config/constants";
 import { StatsCard } from "./StatsCard";
 import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
 import type { DatePreset } from "./DateRangeFilter";
-import { reportsService } from "@/services/reports.service";
 import type { DateRange } from "@/services/reports.service";
-import { appointmentsService } from "@/services/appointments.service";
+import { useDashboardStats } from "@/hooks/useReports";
+import { useAppointments } from "@/hooks/useAppointments";
 import { formatCurrency } from "@/utils/format";
 import { formatTime, formatDate } from "@/utils/date";
 import { AppointmentStatusBadge } from "@/components/common/StatusBadge";
@@ -21,36 +21,23 @@ import type { Appointment } from "@/types/database";
 export function AdminDashboard({ userId }: { userId: string }) {
   const [preset, setPreset] = useState<DatePreset>("today");
   const [range, setRange] = useState<DateRange>(() => computeDateRange("today"));
-  const [stats, setStats] = useState({
+
+  const { data: statsRaw, isLoading: statsLoading } = useDashboardStats(range);
+  const stats = statsRaw ?? {
     appointmentsCount: 0,
     pendingAppointmentsCount: 0,
     totalClientsCount: 0,
     appointmentRevenue: 0,
     orderRevenue: 0,
     revenue: 0,
-  });
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  };
 
-  const load = useCallback(async (r: DateRange) => {
-    if (!r.from || !r.to) return;
-    setLoading(true);
-    const [statsResult, aptsResult] = await Promise.all([
-      reportsService.getDashboardStats(r),
-      appointmentsService.getAll({ dateFrom: r.from, dateTo: r.to }),
-    ]);
-    if (statsResult.data) setStats(statsResult.data);
-    setAppointments(
-      ((aptsResult.data as Appointment[]) ?? []).sort(
-        (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
-      ),
-    );
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    load(range);
-  }, [load, range]);
+  const { data: aptsRaw, isLoading: aptsLoading } = useAppointments(
+    range.from && range.to ? { dateFrom: range.from, dateTo: range.to } : undefined,
+  );
+  const appointments = ((aptsRaw ?? []) as Appointment[]).sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
 
   const handleRangeChange = (p: DatePreset, r: DateRange) => {
     setPreset(p);
@@ -59,7 +46,7 @@ export function AdminDashboard({ userId }: { userId: string }) {
 
   const rangeLabel = PRESET_RANGE_LABEL[preset];
 
-  if (loading) return <PageLoading />;
+  if (statsLoading || aptsLoading) return <PageLoading />;
 
   return (
     <div className="space-y-6">

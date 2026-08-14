@@ -2,52 +2,46 @@
 
 import type { ServiceVariantManagerProps } from "@/types/props";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Trash2, Plus } from "lucide-react";
-import { servicesService } from "@/services/services.service";
+import { useServiceVariants, useCreateServiceVariant, useDeleteServiceVariant } from "@/hooks/useServices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ServiceVariant } from "@/types/database";
 
 export function ServiceVariantManager({ serviceId }: ServiceVariantManagerProps) {
-  const [variants, setVariants] = useState<ServiceVariant[]>([]);
+  const { data: variantsRaw } = useServiceVariants(serviceId);
+  const variants = (variantsRaw ?? []) as ServiceVariant[];
+  const createVariant = useCreateServiceVariant();
+  const deleteVariant = useDeleteServiceVariant();
+
   const [name, setName] = useState("");
   const [priceMod, setPriceMod] = useState("");
   const [durationMod, setDurationMod] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await servicesService.getVariants(serviceId);
-      setVariants((data as ServiceVariant[]) ?? []);
-    } catch { /* ignore */ }
-  }, [serviceId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const addVariant = async () => {
+  const addVariant = () => {
     if (!name.trim()) return;
-    setSaving(true);
-    await servicesService.createVariant({
-      service_id: serviceId,
-      name: name.trim(),
-      price_modifier: parseFloat(priceMod) || 0,
-      duration_modifier: parseInt(durationMod) || 0,
-      is_active: true,
-    });
-    setName("");
-    setPriceMod("");
-    setDurationMod("");
-    setSaving(false);
-    load();
+    createVariant.mutate(
+      {
+        serviceId,
+        name: name.trim(),
+        price_modifier: parseFloat(priceMod) || 0,
+        duration_modifier: parseInt(durationMod) || 0,
+        is_active: true,
+      },
+      {
+        onSuccess: () => {
+          setName("");
+          setPriceMod("");
+          setDurationMod("");
+        },
+      },
+    );
   };
 
-  const removeVariant = async (id: string) => {
-    await servicesService.deleteVariant(id);
-    load();
+  const removeVariant = (id: string) => {
+    deleteVariant.mutate({ variantId: id, serviceId });
   };
 
   return (
@@ -97,7 +91,7 @@ export function ServiceVariantManager({ serviceId }: ServiceVariantManagerProps)
             />
           </div>
         </div>
-        <Button size="sm" onClick={addVariant} disabled={saving || !name.trim()} className="w-full">
+        <Button size="sm" onClick={addVariant} disabled={createVariant.isPending || !name.trim()} className="w-full">
           <Plus className="h-4 w-4 mr-1" /> Add Variant
         </Button>
       </div>

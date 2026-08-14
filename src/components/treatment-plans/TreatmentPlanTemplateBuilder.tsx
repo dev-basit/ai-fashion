@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { treatmentPlansService } from "@/services/treatment-plans.service";
+import { useCreateTreatmentPlanTemplate, useUpdateTreatmentPlanTemplate } from "@/hooks/useTreatmentPlans";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,25 +22,27 @@ export function TreatmentPlanTemplateBuilder({ template, onSuccess, onCancel }: 
   const [steps, setSteps] = useState<TreatmentPlanStep[]>(
     template?.steps ?? [{ day: 1, title: "", description: "" }],
   );
-  const [saving, setSaving] = useState(false);
+  const createTemplate = useCreateTreatmentPlanTemplate();
+  const updateTemplate = useUpdateTreatmentPlanTemplate();
+  const saving = createTemplate.isPending || updateTemplate.isPending;
 
   const updateStep = (i: number, patch: Partial<TreatmentPlanStep>) =>
     setSteps((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
 
-  const save = async () => {
-    setSaving(true);
+  const save = () => {
     const cleanSteps = steps.filter((s) => s.title.trim());
     const payload = {
       name,
       description: description || null,
       duration_days: parseInt(duration),
       steps: cleanSteps,
-      is_active: true
+      is_active: true,
     };
-    if (isEdit) await treatmentPlansService.updateTemplate(template!.id, payload);
-    else await treatmentPlansService.createTemplate(payload);
-    setSaving(false);
-    onSuccess();
+    if (isEdit) {
+      updateTemplate.mutate({ id: template!.id, ...payload }, { onSuccess });
+    } else {
+      createTemplate.mutate(payload, { onSuccess });
+    }
   };
 
   return (

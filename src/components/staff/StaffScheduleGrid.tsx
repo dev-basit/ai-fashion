@@ -2,8 +2,8 @@
 
 import type { StaffScheduleGridProps, StaffScheduleRow } from "@/types/props";
 
-import { useState, useEffect, useCallback } from "react";
-import { staffService } from "@/services/staff.service";
+import { useState, useEffect } from "react";
+import { useStaffSchedule, useUpsertSchedule } from "@/hooks/useStaff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -20,42 +20,36 @@ const DEFAULT_ROWS: StaffScheduleRow[] = DAYS_OF_WEEK.map((_, i) => ({
 
 export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffScheduleGridProps) {
   const [rows, setRows] = useState<StaffScheduleRow[]>(DEFAULT_ROWS);
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      const { data } = await staffService.getSchedule(staffProfileId);
-      if (data && data.length) {
-        const byDay = new Map((data as StaffSchedule[]).map((s) => [s.day_of_week, s]));
-        setRows(
-          DEFAULT_ROWS.map((d) => {
-            const existing = byDay.get(d.day_of_week);
-            return existing
-              ? {
-                  day_of_week: d.day_of_week,
-                  start_time: existing.start_time.slice(0, 5),
-                  end_time: existing.end_time.slice(0, 5),
-                  is_working: existing.is_working,
-                }
-              : d;
-          }),
-        );
-      }
-    } catch { /* ignore */ }
-  }, [staffProfileId]);
+  const { data: scheduleData } = useStaffSchedule(staffProfileId);
+  const upsertSchedule = useUpsertSchedule();
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (scheduleData && (scheduleData as StaffSchedule[]).length) {
+      const byDay = new Map((scheduleData as StaffSchedule[]).map((s) => [s.day_of_week, s]));
+      setRows(
+        DEFAULT_ROWS.map((d) => {
+          const existing = byDay.get(d.day_of_week);
+          return existing
+            ? {
+                day_of_week: d.day_of_week,
+                start_time: existing.start_time.slice(0, 5),
+                end_time: existing.end_time.slice(0, 5),
+                is_working: existing.is_working,
+              }
+            : d;
+        }),
+      );
+    }
+  }, [scheduleData]);
 
   const update = (day: number, patch: Partial<StaffScheduleRow>) => {
     setRows((prev) => prev.map((r) => (r.day_of_week === day ? { ...r, ...patch } : r)));
   };
 
-  const save = async () => {
-    setSaving(true);
-    await staffService.upsertSchedule(
+  const save = () => {
+    upsertSchedule.mutate(
       rows.map((r) => ({
         staff_profile_id: staffProfileId,
         day_of_week: r.day_of_week,
@@ -63,10 +57,13 @@ export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffSche
         end_time: r.end_time,
         is_working: r.is_working,
       })),
+      {
+        onSuccess: () => {
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        },
+      },
     );
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   return (
@@ -105,8 +102,8 @@ export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffSche
         ))}
       </div>
       {editable && (
-        <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? "Saving..." : saved ? "Saved!" : "Save Schedule"}
+        <Button size="sm" onClick={save} disabled={upsertSchedule.isPending}>
+          {upsertSchedule.isPending ? "Saving..." : saved ? "Saved!" : "Save Schedule"}
         </Button>
       )}
     </div>

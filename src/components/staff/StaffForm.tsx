@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { staffService } from "@/services/staff.service";
+import { useUpdateStaff } from "@/hooks/useStaff";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +23,8 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
   const [hireDate, setHireDate] = useState(staff?.hire_date ?? "");
   const [hourlyRate, setHourlyRate] = useState(staff?.hourly_rate?.toString() ?? "");
   const [commissionRate, setCommissionRate] = useState(staff?.commission_rate?.toString() ?? "");
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const updateStaff = useUpdateStaff();
 
   const toArray = (s: string) =>
     s
@@ -34,20 +34,20 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
 
   const submit = async () => {
     setError(null);
-    setSaving(true);
 
     if (isEdit) {
-      const { error: err } = await staffService.update(staff!.id, {
-        bio: bio || null,
-        specializations: toArray(specializations).length ? toArray(specializations) : null,
-        certifications: toArray(certifications).length ? toArray(certifications) : null,
-        hire_date: hireDate || null,
-        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-        commission_rate: commissionRate ? parseFloat(commissionRate) : null
-      });
-      if (err) {
-        setError(err.message);
-        setSaving(false);
+      try {
+        await updateStaff.mutateAsync({
+          id: staff!.id,
+          bio: bio || null,
+          specializations: toArray(specializations).length ? toArray(specializations) : null,
+          certifications: toArray(certifications).length ? toArray(certifications) : null,
+          hire_date: hireDate || null,
+          hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
+          commission_rate: commissionRate ? parseFloat(commissionRate) : null,
+        });
+      } catch (e) {
+        setError((e as Error).message);
         return;
       }
     } else {
@@ -64,22 +64,21 @@ export function StaffForm({ staff, onSuccess, onCancel }: StaffFormProps) {
           certifications: toArray(certifications),
           hire_date: hireDate || null,
           hourly_rate: hourlyRate ? parseFloat(hourlyRate) : null,
-          commission_rate: commissionRate ? parseFloat(commissionRate) : null
-        })
+          commission_rate: commissionRate ? parseFloat(commissionRate) : null,
+        }),
       });
       if (!res.ok) {
         let j: Record<string, unknown> = {};
         try { j = await res.json(); } catch { /* ignore */ }
         setError((j.error as string) ?? "Failed to create staff");
-        setSaving(false);
         return;
       }
     }
 
-    setSaving(false);
     onSuccess();
   };
 
+  const saving = updateStaff.isPending;
   const canSubmit = isEdit || (!!email && !!password && !!fullName);
 
   return (

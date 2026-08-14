@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { clientsService } from "@/services/clients.service";
+import { useUpdateClient } from "@/hooks/useClients";
 import { clientSchema, type ClientFormData } from "@/types/schemas/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import type { ClientFormProps } from "@/types/props";
 export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
   const isEdit = !!client;
   const [error, setError] = useState<string | null>(null);
+  const updateClient = useUpdateClient();
 
   const {
     register,
@@ -50,14 +51,16 @@ export function ClientForm({ client, onSuccess, onCancel }: ClientFormProps) {
     }
 
     if (isEdit) {
-      const { error: err } = await clientsService.update(client!.id, {
-        full_name: values.full_name,
-        phone: values.phone || null,
-        date_of_birth: values.date_of_birth || null,
-        notes: values.notes || null
-      });
-      if (err) {
-        setError(err.message);
+      try {
+        await updateClient.mutateAsync({
+          id: client!.id,
+          full_name: values.full_name,
+          phone: values.phone || null,
+          date_of_birth: values.date_of_birth || null,
+          notes: values.notes || null,
+        });
+      } catch (e) {
+        setError((e as Error).message);
         return;
       }
     } else {

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { consultationService } from "@/services/consultation.service";
-import { clientsService } from "@/services/clients.service";
-import { useEffect } from "react";
+import { useCreateConsultationRecord } from "@/hooks/useConsultation";
+import { useClients } from "@/hooks/useClients";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,42 +24,32 @@ export function ConsultationForm({
   const [observations, setObservations] = useState("");
   const [recommendations, setRecommendations] = useState("");
   const [selectedClient, setSelectedClient] = useState(clientId ?? "");
-  const [clients, setClients] = useState<Profile[]>([]);
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!clientId) {
-      const load = async () => {
-        try {
-          const { data } = await clientsService.getAll();
-          setClients(data ?? []);
-        } catch { /* ignore */ }
-      };
-      load();
-    }
-  }, [clientId]);
+  const { data: clientsRaw } = useClients();
+  const clients = (!clientId ? clientsRaw ?? [] : []) as Profile[];
+  const createRecord = useCreateConsultationRecord();
 
   const setResp = (fieldId: string, value: unknown) => setResponses((p) => ({ ...p, [fieldId]: value }));
 
-  const save = async () => {
+  const save = () => {
     if (!selectedClient) return;
-    setSaving(true);
-    await consultationService.createRecord({
-      template_id: template.id,
-      client_id: selectedClient,
-      staff_profile_id: staffProfileId ?? null,
-      responses,
-      observations: observations || null,
-      recommendations: recommendations.trim()
-        ? recommendations
-            .split("\n")
-            .map((r) => r.trim())
-            .filter(Boolean)
-        : null,
-      submitted_at: new Date().toISOString(),
-    });
-    setSaving(false);
-    onSuccess();
+    createRecord.mutate(
+      {
+        template_id: template.id,
+        client_id: selectedClient,
+        staff_profile_id: staffProfileId ?? null,
+        responses,
+        observations: observations || null,
+        recommendations: recommendations.trim()
+          ? recommendations
+              .split("\n")
+              .map((r) => r.trim())
+              .filter(Boolean)
+          : null,
+        submitted_at: new Date().toISOString(),
+      },
+      { onSuccess },
+    );
   };
 
   return (
@@ -88,33 +77,36 @@ export function ConsultationForm({
 
       {template.fields.map((field: ConsultationField) => (
         <div key={field.id} className="space-y-1.5">
-          <Label>
+          <Label className="text-sm">
             {field.label}
-            {field.required && <span className="text-destructive"> *</span>}
+            {field.required && <span className="text-destructive ml-1">*</span>}
           </Label>
           {field.type === "text" && (
             <Input
-              value={(responses[field.id] as string) ?? ""}
+              placeholder={field.placeholder}
+              value={String(responses[field.id] ?? "")}
               onChange={(e) => setResp(field.id, e.target.value)}
             />
           )}
           {field.type === "textarea" && (
             <Textarea
-              rows={2}
-              value={(responses[field.id] as string) ?? ""}
+              rows={3}
+              placeholder={field.placeholder}
+              value={String(responses[field.id] ?? "")}
               onChange={(e) => setResp(field.id, e.target.value)}
             />
           )}
-          {field.type === "date" && (
-            <DatePicker value={(responses[field.id] as string) ?? ""} onChange={(v) => setResp(field.id, v)} />
-          )}
-          {(field.type === "select" || field.type === "radio") && (
-            <Select onValueChange={(v: unknown) => setResp(field.id, String(v ?? ""))}>
+          {field.type === "select" && field.options && (
+            <Select
+              value={String(responses[field.id] ?? "")}
+              items={Object.fromEntries(field.options.map((o: string) => [o, o]))}
+              onValueChange={(v: unknown) => setResp(field.id, String(v ?? ""))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select..." />
               </SelectTrigger>
               <SelectContent>
-                {(field.options ?? []).map((o) => (
+                {field.options.map((o: string) => (
                   <SelectItem key={o} value={o}>
                     {o}
                   </SelectItem>
@@ -123,39 +115,57 @@ export function ConsultationForm({
             </Select>
           )}
           {field.type === "checkbox" && (
-            <div className="space-y-1.5">
-              {(field.options ?? []).map((o) => {
-                const arr = (responses[field.id] as string[]) ?? [];
-                return (
-                  <label key={o} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={arr.includes(o)}
-                      onCheckedChange={(c) => setResp(field.id, c ? [...arr, o] : arr.filter((x) => x !== o))}
-                    />
-                    {o}
-                  </label>
-                );
-              })}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={Boolean(responses[field.id])}
+                onCheckedChange={(c) => setResp(field.id, !!c)}
+              />
+              <span className="text-sm text-muted-foreground">{field.placeholder ?? "Yes"}</span>
             </div>
+          )}
+          {field.type === "date" && (
+            <DatePicker
+              value={String(responses[field.id] ?? "")}
+              onChange={(v) => setResp(field.id, v)}
+            />
+          )}
+          {(field.type as string) === "number" && (
+            <Input
+              type="number"
+              placeholder={field.placeholder}
+              value={String(responses[field.id] ?? "")}
+              onChange={(e) => setResp(field.id, e.target.value)}
+            />
           )}
         </div>
       ))}
 
-      <div className="space-y-1.5 border-t border-border pt-4">
-        <Label>Observations</Label>
-        <Textarea rows={2} value={observations} onChange={(e) => setObservations(e.target.value)} />
-      </div>
       <div className="space-y-1.5">
-        <Label>Recommendations (one per line)</Label>
-        <Textarea rows={2} value={recommendations} onChange={(e) => setRecommendations(e.target.value)} />
+        <Label className="text-sm">Observations (staff only)</Label>
+        <Textarea
+          rows={2}
+          value={observations}
+          onChange={(e) => setObservations(e.target.value)}
+          placeholder="Clinical observations..."
+        />
       </div>
 
-      <div className="flex gap-2 justify-end">
-        <Button variant="outline" onClick={onCancel} disabled={saving}>
+      <div className="space-y-1.5">
+        <Label className="text-sm">Recommendations (one per line)</Label>
+        <Textarea
+          rows={3}
+          value={recommendations}
+          onChange={(e) => setRecommendations(e.target.value)}
+          placeholder="- Use SPF 50 daily&#10;- Avoid fragrance products"
+        />
+      </div>
+
+      <div className="flex gap-2 justify-end pt-2">
+        <Button variant="outline" onClick={onCancel} disabled={createRecord.isPending}>
           Cancel
         </Button>
-        <Button onClick={save} disabled={saving || !selectedClient}>
-          {saving ? "Submitting..." : "Submit"}
+        <Button onClick={save} disabled={createRecord.isPending || !selectedClient}>
+          {createRecord.isPending ? "Saving..." : "Submit"}
         </Button>
       </div>
     </div>

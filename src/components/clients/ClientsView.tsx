@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
-import { useClients } from "@/hooks/useClients";
-import { clientsService } from "@/services/clients.service";
+import { useClients, useClientAppointmentCounts } from "@/hooks/useClients";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageLoading } from "@/components/common/LoadingSpinner";
@@ -19,6 +18,7 @@ import { formatInitials } from "@/utils/format";
 import { formatDate } from "@/utils/date";
 import { differenceInDays } from "date-fns";
 import type { ClientsViewProps } from "@/types/props";
+import type { Profile } from "@/types/database";
 
 
 type Segment = "all" | "new" | "recurring" | "vip";
@@ -34,18 +34,10 @@ export function ClientsView({ role }: ClientsViewProps) {
   const [search, setSearch] = useState("");
   const [segment, setSegment] = useState<Segment>("all");
   const [showForm, setShowForm] = useState(false);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const { clients, isLoading, refetch } = useClients(search || undefined);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await clientsService.getAppointmentCountsByClient();
-        if (data) setCounts(data);
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
+  const { data: clientsRaw, isLoading } = useClients(search || undefined);
+  const clients = (clientsRaw ?? []) as Profile[];
+  const { data: countsRaw } = useClientAppointmentCounts();
+  const counts = (countsRaw ?? {}) as Record<string, number>;
 
   const isVip = (notes: string | null) => !!notes && /vip/i.test(notes);
 
@@ -140,10 +132,7 @@ export function ClientsView({ role }: ClientsViewProps) {
             <DialogTitle>Add Client</DialogTitle>
           </DialogHeader>
           <ClientForm
-            onSuccess={() => {
-              setShowForm(false);
-              refetch();
-            }}
+            onSuccess={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
           />
         </DialogContent>

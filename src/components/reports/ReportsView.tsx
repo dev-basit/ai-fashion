@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { reportsService } from "@/services/reports.service";
+import { useState, useMemo } from "react";
+import {
+  useRevenueReport,
+  useAppointmentReport,
+  useClientReport,
+  useStaffReport,
+  useOrderReport,
+  useProductSalesReport,
+} from "@/hooks/useReports";
 import { PageHeader } from "@/components/common/PageHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { PageLoading } from "@/components/common/LoadingSpinner";
@@ -34,139 +41,113 @@ export function ReportsView({ role }: ReportsViewProps) {
   const today = new Date();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(today), "yyyy-MM-dd"));
   const [dateTo, setDateTo] = useState(format(endOfMonth(today), "yyyy-MM-dd"));
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    appointmentRevenue: 0,
-    orderRevenue: 0,
-    revenue: 0,
-    appointmentCount: 0,
-    clientCount: 0,
-    avgRevenue: 0,
-  });
-  const [revenueData, setRevenueData] = useState<{ date: string; appointments: number; products: number }[]>([]);
-  const [appointmentData, setAppointmentData] = useState<{ date: string; count: number }[]>([]);
-  const [staffPerf, setStaffPerf] = useState<StaffPerf[]>([]);
-  const [productSales, setProductSales] = useState<{ name: string; qty: number; revenue: number }[]>([]);
+  const [appliedFrom, setAppliedFrom] = useState(dateFrom);
+  const [appliedTo, setAppliedTo] = useState(dateTo);
 
   const isAdmin = role === "admin";
+  const from = `${appliedFrom}T00:00:00.000Z`;
+  const to = `${appliedTo}T23:59:59.999Z`;
 
-  const load = async () => {
-    setLoading(true);
-    const range = { from: `${dateFrom}T00:00:00.000Z`, to: `${dateTo}T23:59:59.999Z` };
+  const { data: revenueRaw, isLoading: revLoading } = useRevenueReport(from, to);
+  const { data: aptRaw, isLoading: aptLoading } = useAppointmentReport(from, to);
+  const { data: clientRaw, isLoading: clientLoading } = useClientReport(from, to);
+  const { data: orderRaw, isLoading: orderLoading } = useOrderReport(from, to);
+  const { data: staffRaw } = useStaffReport(from, to);
+  const { data: productRaw } = useProductSalesReport(from, to);
 
-    const requests: Promise<unknown>[] = [
-      reportsService.getRevenueStats(range),
-      reportsService.getAppointmentStats(range),
-      reportsService.getClientStats(range),
-      reportsService.getOrderRevenue(range),
-    ];
-    if (isAdmin) {
-      requests.push(reportsService.getStaffPerformance(range));
-      requests.push(reportsService.getProductSales(range));
-    }
+  const loading = revLoading || aptLoading || clientLoading || orderLoading;
 
-    const [revenueResult, appointmentResult, clientResult, orderRevenueResult, staffResult, productResult] =
-      (await Promise.all(requests)) as [
-        Awaited<ReturnType<typeof reportsService.getRevenueStats>>,
-        Awaited<ReturnType<typeof reportsService.getAppointmentStats>>,
-        Awaited<ReturnType<typeof reportsService.getClientStats>>,
-        Awaited<ReturnType<typeof reportsService.getOrderRevenue>>,
-        Awaited<ReturnType<typeof reportsService.getStaffPerformance>> | undefined,
-        Awaited<ReturnType<typeof reportsService.getProductSales>> | undefined,
-      ];
+  const revenueRows = useMemo(
+    () => (revenueRaw ?? []) as Array<{ price: number; discount: number; starts_at: string }>,
+    [revenueRaw],
+  );
+  const aptRows = useMemo(
+    () => (aptRaw ?? []) as Array<{ starts_at: string; status: string }>,
+    [aptRaw],
+  );
+  const clientRows = useMemo(() => (clientRaw ?? []) as unknown[], [clientRaw]);
+  const orderRows = useMemo(
+    () => (orderRaw ?? []) as Array<{ total_amount: number; created_at: string }>,
+    [orderRaw],
+  );
 
-    const revenueRows = (revenueResult.data ?? []) as Array<{ price: number; discount: number; starts_at: string }>;
-    const aptRows = (appointmentResult.data ?? []) as Array<{ starts_at: string; status: string }>;
-    const clientRows = clientResult.data ?? [];
-    const orderRows = (orderRevenueResult.data ?? []) as Array<{ total_amount: number; created_at: string }>;
+  const appointmentRevenue = useMemo(
+    () => revenueRows.reduce((sum, r) => sum + (r.price - r.discount), 0),
+    [revenueRows],
+  );
+  const orderRevenue = useMemo(() => orderRows.reduce((sum, o) => sum + (o.total_amount ?? 0), 0), [orderRows]);
 
-    const appointmentRevenue = revenueRows.reduce(
-      (sum: number, r) => sum + (r.price - r.discount),
-      0,
-    );
-    const orderRevenue = orderRows.reduce((sum, o) => sum + (o.total_amount ?? 0), 0);
-    const totalRevenue = appointmentRevenue + orderRevenue;
-
-    // Build merged chart data keyed by date
-    const revenueByDate = new Map<string, { appointments: number; products: number }>();
-    revenueRows.forEach((r) => {
-      const d = formatDate(r.starts_at, "MMM d");
-      const existing = revenueByDate.get(d) ?? { appointments: 0, products: 0 };
-      revenueByDate.set(d, {
-        ...existing,
-        appointments: existing.appointments + (r.price - r.discount),
-      });
-    });
-    orderRows.forEach((o) => {
-      const d = formatDate(o.created_at, "MMM d");
-      const existing = revenueByDate.get(d) ?? { appointments: 0, products: 0 };
-      revenueByDate.set(d, { ...existing, products: existing.products + (o.total_amount ?? 0) });
-    });
-
-    const aptByDate = new Map<string, number>();
-    aptRows.forEach((r) => {
-      const d = formatDate(r.starts_at, "MMM d");
-      aptByDate.set(d, (aptByDate.get(d) ?? 0) + 1);
-    });
-
-    setStats({
+  const stats = useMemo(
+    () => ({
       appointmentRevenue,
       orderRevenue,
-      revenue: totalRevenue,
+      revenue: appointmentRevenue + orderRevenue,
       appointmentCount: aptRows.length,
       clientCount: clientRows.length,
       avgRevenue: aptRows.length > 0 ? appointmentRevenue / aptRows.length : 0,
+    }),
+    [appointmentRevenue, orderRevenue, aptRows.length, clientRows.length],
+  );
+
+  const revenueData = useMemo(() => {
+    const map = new Map<string, { appointments: number; products: number }>();
+    revenueRows.forEach((r) => {
+      const d = formatDate(r.starts_at, "MMM d");
+      const e = map.get(d) ?? { appointments: 0, products: 0 };
+      map.set(d, { ...e, appointments: e.appointments + (r.price - r.discount) });
     });
-    setRevenueData(
-      Array.from(revenueByDate.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([date, v]) => ({ date, ...v })),
-    );
-    setAppointmentData(Array.from(aptByDate.entries()).map(([date, count]) => ({ date, count })));
+    orderRows.forEach((o) => {
+      const d = formatDate(o.created_at, "MMM d");
+      const e = map.get(d) ?? { appointments: 0, products: 0 };
+      map.set(d, { ...e, products: e.products + (o.total_amount ?? 0) });
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, v]) => ({ date, ...v }));
+  }, [revenueRows, orderRows]);
 
-    if (staffResult) {
-      const staffRows = (staffResult.data ?? []) as Array<{
-        staff_profile_id: string | null;
-        price: number;
-        staff_profiles?: { profiles?: { full_name?: string | null } | null };
-      }>;
-      const staffMap = new Map<string, StaffPerf>();
-      staffRows.forEach((r) => {
-        const name = r.staff_profiles?.profiles?.full_name ?? "Unknown";
-        const existing = staffMap.get(name) ?? { name, appointments: 0, revenue: 0 };
-        staffMap.set(name, {
-          name,
-          appointments: existing.appointments + 1,
-          revenue: existing.revenue + r.price,
-        });
-      });
-      setStaffPerf(Array.from(staffMap.values()));
-    }
+  const appointmentData = useMemo(() => {
+    const map = new Map<string, number>();
+    aptRows.forEach((r) => {
+      const d = formatDate(r.starts_at, "MMM d");
+      map.set(d, (map.get(d) ?? 0) + 1);
+    });
+    return Array.from(map.entries()).map(([date, count]) => ({ date, count }));
+  }, [aptRows]);
 
-    if (productResult) {
-      const productRows = (productResult.data ?? []) as Array<{
-        quantity: number;
-        unit_price: number;
-        products?: { name?: string | null };
-      }>;
-      const productMap = new Map<string, { qty: number; revenue: number }>();
-      productRows.forEach((r) => {
-        const name = r.products?.name ?? "Unknown";
-        const existing = productMap.get(name) ?? { qty: 0, revenue: 0 };
-        productMap.set(name, {
-          qty: existing.qty + r.quantity,
-          revenue: existing.revenue + r.quantity * r.unit_price,
-        });
-      });
-      setProductSales(Array.from(productMap.entries()).map(([name, v]) => ({ name, ...v })));
-    }
+  const staffPerf = useMemo<StaffPerf[]>(() => {
+    const rows = (staffRaw ?? []) as Array<{
+      price: number;
+      staff_profiles?: { profiles?: { full_name?: string | null } | null };
+    }>;
+    const map = new Map<string, StaffPerf>();
+    rows.forEach((r) => {
+      const name = r.staff_profiles?.profiles?.full_name ?? "Unknown";
+      const e = map.get(name) ?? { name, appointments: 0, revenue: 0 };
+      map.set(name, { name, appointments: e.appointments + 1, revenue: e.revenue + r.price });
+    });
+    return Array.from(map.values());
+  }, [staffRaw]);
 
-    setLoading(false);
+  const productSales = useMemo(() => {
+    const rows = (productRaw ?? []) as Array<{
+      quantity: number;
+      unit_price: number;
+      products?: { name?: string | null };
+    }>;
+    const map = new Map<string, { qty: number; revenue: number }>();
+    rows.forEach((r) => {
+      const name = r.products?.name ?? "Unknown";
+      const e = map.get(name) ?? { qty: 0, revenue: 0 };
+      map.set(name, { qty: e.qty + r.quantity, revenue: e.revenue + r.quantity * r.unit_price });
+    });
+    return Array.from(map.entries()).map(([name, v]) => ({ name, ...v }));
+  }, [productRaw]);
+
+  const applyFilter = () => {
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
   };
-
-  useEffect(() => {
-    load();
-  }, []);
 
   if (loading) return <PageLoading />;
 
@@ -183,7 +164,7 @@ export function ReportsView({ role }: ReportsViewProps) {
           <Label className="text-xs">To</Label>
           <DatePicker value={dateTo} onChange={setDateTo} placeholder="To date" className="h-8 text-xs" />
         </div>
-        <Button size="sm" onClick={load}>
+        <Button size="sm" onClick={applyFilter}>
           Apply
         </Button>
         <Button

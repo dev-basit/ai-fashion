@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Plus, ClipboardList, Pencil, FileText } from "lucide-react";
 import Link from "next/link";
-import { consultationService } from "@/services/consultation.service";
+import { useConsultationTemplates, useConsultationRecords } from "@/hooks/useConsultation";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageLoading } from "@/components/common/LoadingSpinner";
@@ -21,9 +21,6 @@ import type { ConsultationFormTemplate, ConsultationRecord } from "@/types/datab
 
 
 export function ConsultationView({ role, userId, staffProfileId }: ConsultationViewProps) {
-  const [templates, setTemplates] = useState<ConsultationFormTemplate[]>([]);
-  const [records, setRecords] = useState<ConsultationRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ConsultationFormTemplate | null>(null);
   const [fillTemplateId, setFillTemplateId] = useState("");
@@ -32,23 +29,16 @@ export function ConsultationView({ role, userId, staffProfileId }: ConsultationV
   const isAdmin = role === "admin";
   const isCustomer = role === "customer";
 
-  const load = useCallback(async () => {
-    const [templatesResult, recordsResult] = await Promise.all([
-      consultationService.getTemplates(),
-      consultationService.getAllRecords(role === "staff" && staffProfileId ? { staffProfileId } : undefined),
-    ]);
-    setTemplates((templatesResult.data as unknown as ConsultationFormTemplate[]) ?? []);
-    setRecords((recordsResult.data as unknown as ConsultationRecord[]) ?? []);
-    setLoading(false);
-  }, [role, staffProfileId]);
+  const { data: templatesRaw, isLoading: loadingTemplates } = useConsultationTemplates();
+  const templates = (templatesRaw ?? []) as ConsultationFormTemplate[];
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const recordFilter = role === "staff" && staffProfileId ? { staffProfileId } : undefined;
+  const { data: recordsRaw, isLoading: loadingRecords } = useConsultationRecords(recordFilter);
+  const records = (recordsRaw ?? []) as ConsultationRecord[];
 
   const fillTemplate = templates.find((t) => t.id === fillTemplateId);
 
-  if (loading) return <PageLoading />;
+  if (loadingTemplates || loadingRecords) return <PageLoading />;
 
   return (
     <div className="space-y-6">
@@ -181,10 +171,7 @@ export function ConsultationView({ role, userId, staffProfileId }: ConsultationV
           </DialogHeader>
           <ConsultationTemplateBuilder
             template={editTemplate ?? undefined}
-            onSuccess={() => {
-              setShowBuilder(false);
-              load();
-            }}
+            onSuccess={() => setShowBuilder(false)}
             onCancel={() => setShowBuilder(false)}
           />
         </DialogContent>
@@ -228,7 +215,6 @@ export function ConsultationView({ role, userId, staffProfileId }: ConsultationV
               onSuccess={() => {
                 setShowFill(false);
                 setFillTemplateId("");
-                load();
               }}
               onCancel={() => {
                 setShowFill(false);

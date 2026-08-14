@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { Calendar, Clock } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/config/constants";
 import { StatsCard } from "./StatsCard";
 import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
 import type { DatePreset } from "./DateRangeFilter";
-import { appointmentsService } from "@/services/appointments.service";
+import { useAppointments } from "@/hooks/useAppointments";
 import { formatDate, formatTime } from "@/utils/date";
 import { AppointmentStatusBadge } from "@/components/common/StatusBadge";
 import { buttonVariants } from "@/components/ui/button";
@@ -19,45 +19,37 @@ import type { DateRange } from "@/services/reports.service";
 export function CustomerDashboard({ userId }: { userId: string }) {
   const [preset, setPreset] = useState<DatePreset>("7d");
   const [range, setRange] = useState<DateRange>(() => computeDateRange("7d"));
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [upcomingCount, setUpcomingCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(
-    async (r: DateRange) => {
-      if (!r.from || !r.to) return;
-      const { data } = await appointmentsService.getAll({ clientId: userId, dateFrom: r.from, dateTo: r.to });
-      const all = ((data as Appointment[]) ?? []).sort(
+  const { data: aptsRaw, isLoading } = useAppointments(
+    range.from && range.to ? { clientId: userId, dateFrom: range.from, dateTo: range.to } : undefined,
+  );
+  const { data: allAptsRaw } = useAppointments({ clientId: userId });
+
+  const appointments = useMemo(
+    () =>
+      ((aptsRaw ?? []) as Appointment[]).sort(
         (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
-      );
-      setAppointments(all);
-
-      // upcoming count is always absolute (future, not date-filtered)
-      const { data: allData } = await appointmentsService.getAll({ clientId: userId });
-      const now = new Date().toISOString();
-      setUpcomingCount(
-        ((allData as Appointment[]) ?? []).filter((a) => a.starts_at >= now && a.status !== "cancelled").length,
-      );
-
-      setLoading(false);
-    },
-    [userId],
+      ),
+    [aptsRaw],
   );
 
-  useEffect(() => {
-    load(range);
-  }, [load, range]);
+  const now = new Date().toISOString();
+  const upcomingCount = useMemo(
+    () =>
+      ((allAptsRaw ?? []) as Appointment[]).filter(
+        (a) => a.starts_at >= now && a.status !== "cancelled",
+      ).length,
+    [allAptsRaw],
+  );
 
   const handleRangeChange = (p: DatePreset, r: DateRange) => {
     setPreset(p);
     setRange(r);
-    setLoading(true);
-    load(r);
   };
 
   const rangeLabel = PRESET_RANGE_LABEL[preset];
 
-  if (loading) return <PageLoading />;
+  if (isLoading) return <PageLoading />;
 
   return (
     <div className="space-y-6">

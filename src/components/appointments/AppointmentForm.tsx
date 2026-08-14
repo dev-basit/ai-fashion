@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { appointmentsService } from "@/services/appointments.service";
 import { appointmentSchema, type AppointmentFormData } from "@/types/schemas/appointment";
-import { servicesService } from "@/services/services.service";
-import { staffService } from "@/services/staff.service";
-import { clientsService } from "@/services/clients.service";
+import { useServices } from "@/hooks/useServices";
+import { useStaff, useStaffByProfile } from "@/hooks/useStaff";
+import { useClients } from "@/hooks/useClients";
+import { useUpdateAppointment } from "@/hooks/useAppointments";
 import { useAuthStore } from "@/store/auth.store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -29,12 +28,18 @@ function toLocalInput(iso: string): string {
 export function AppointmentForm({ userRole, clientId, appointment, onSuccess, onCancel }: AppointmentFormProps) {
   const isEdit = !!appointment;
   const userId = useAuthStore((s) => s.user?.id);
-  const [services, setServices] = useState<Service[]>([]);
-  const [staffList, setStaffList] = useState<StaffProfile[]>([]);
-  const [clients, setClients] = useState<Profile[]>([]);
   const [staffResolved, setStaffResolved] = useState(userRole !== "staff");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: servicesRaw } = useServices();
+  const services = (servicesRaw ?? []) as Service[];
+  const { data: staffRaw } = useStaff();
+  const staffList = userRole !== "staff" ? ((staffRaw ?? []) as StaffProfile[]) : [];
+  const staffByProfile = useStaffByProfile(userRole === "staff" ? (userId ?? null) : null);
+  const { data: clientsRaw } = useClients();
+  const clients = (!clientId && !isEdit ? clientsRaw ?? [] : []) as Profile[];
+  const updateAppointment = useUpdateAppointment();
 
   const {
     register,
@@ -53,36 +58,13 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
     }
   });
 
+  // Auto-set staff_profile_id for staff role when their profile loads
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data: svcData } = await servicesService.getAllServices();
-        setServices((svcData as unknown as Service[]) ?? []);
-
-        if (userRole === "staff") {
-          // Auto-resolve logged-in staff member's profile — no dropdown shown
-          if (userId) {
-            try {
-              const { data } = await staffService.getByProfileId(userId);
-              if (data) setValue("staff_profile_id", data.id);
-            } finally {
-              setStaffResolved(true);
-            }
-          }
-        } else {
-          // Admin / customer: load full staff list
-          const { data: staffData } = await staffService.getAll();
-          setStaffList((staffData as unknown as StaffProfile[]) ?? []);
-        }
-
-        if (!clientId && !isEdit) {
-          const { data: clientData } = await clientsService.getAll();
-          setClients(clientData ?? []);
-        }
-      } catch { /* ignore */ }
-    };
-    load();
-  }, [clientId, isEdit, userRole, userId, setValue]);
+    if (userRole === "staff" && staffByProfile.data?.[0]) {
+      setValue("staff_profile_id", staffByProfile.data[0].id);
+      setStaffResolved(true);
+    }
+  }, [userRole, staffByProfile.data, setValue]);
 
   const onSubmit = async (data: AppointmentFormData) => {
     setSubmitting(true);
@@ -107,29 +89,26 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
       notes: data.notes || null
     };
 
-    let err: { message: string } | null = null;
-    if (isEdit) {
-      const { error } = await appointmentsService.update(appointment!.id, payload);
-      err = error;
-    } else {
-      const res = await fetch("/api/appointments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, status: "pending", payment_status: "unpaid" })
-      });
-      if (!res.ok) {
-        let json: Record<string, unknown> = {};
-        try { json = await res.json(); } catch { /* ignore */ }
-        err = { message: (json.error as string) ?? "Failed to create appointment" };
+    try {
+      if (isEdit) {
+        await updateAppointment.mutateAsync({ id: appointment!.id, ...payload });
+      } else {
+        const res = await fetch("/api/appointments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, status: "pending", payment_status: "unpaid" })
+        });
+        if (!res.ok) {
+          let json: Record<string, unknown> = {};
+          try { json = await res.json(); } catch { /* ignore */ }
+          throw new Error((json.error as string) ?? "Failed to create appointment");
+        }
       }
-    }
-
-    if (err) {
-      setError(err.message);
+      onSuccess();
+    } catch (e) {
+      setError((e as Error).message);
       setSubmitting(false);
-      return;
     }
-    onSuccess();
   };
 
   return (

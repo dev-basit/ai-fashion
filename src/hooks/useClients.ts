@@ -1,25 +1,94 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { QK } from "@/config/query";
 import { clientsService } from "@/services/clients.service";
 import type { Profile } from "@/types/database";
 
 export function useClients(search?: string) {
-  const [clients, setClients] = useState<Profile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  return useQuery({
+    queryKey: QK.clients(search),
+    queryFn: async () => {
+      const { data, error } = await clientsService.getAll(search);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Profile[];
+    },
+  });
+}
 
-  const fetch = useCallback(async () => {
-    setIsLoading(true);
-    const { data, error } = await clientsService.getAll(search);
-    if (error) setError(error.message);
-    else setClients(data ?? []);
-    setIsLoading(false);
-  }, [search]);
+export function useClient(id: string | null) {
+  return useQuery({
+    queryKey: QK.client(id ?? ""),
+    queryFn: async () => {
+      const { data, error } = await clientsService.getById(id!);
+      if (error) throw new Error(error.message);
+      return data as Profile;
+    },
+    enabled: !!id,
+  });
+}
 
-  useEffect(() => {
-    fetch();
-  }, [fetch]);
+export function useClientHistory(id: string | null) {
+  return useQuery({
+    queryKey: QK.clientHistory(id ?? ""),
+    queryFn: async () => {
+      const { data, error } = await clientsService.getClientHistory(id!);
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!id,
+  });
+}
 
-  return { clients, isLoading, error, refetch: fetch };
+export function useClientAppointmentCounts() {
+  return useQuery({
+    queryKey: QK.clientCounts(),
+    queryFn: async () => {
+      const { data, error } = await clientsService.getAppointmentCountsByClient();
+      if (error) throw new Error(error.message);
+      return (data ?? {}) as Record<string, number>;
+    },
+  });
+}
+
+export function useCreateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data, error } = await clientsService.create(payload as Parameters<typeof clientsService.create>[0]);
+      if (error) throw new Error(error.message);
+      return data as Profile;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.clients() });
+    },
+  });
+}
+
+export function useUpdateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: { id: string } & Partial<Profile>) => {
+      const { data, error } = await clientsService.update(id, payload);
+      if (error) throw new Error(error.message);
+      return data as Profile;
+    },
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: QK.clients() });
+      qc.invalidateQueries({ queryKey: QK.client(id) });
+    },
+  });
+}
+
+export function useDeactivateClient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await clientsService.deactivate(id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QK.clients() });
+    },
+  });
 }

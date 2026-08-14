@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { Plus, Scissors, MoreVertical, Pencil, Layers, Power, Trash2 } from "lucide-react";
-import { useServices } from "@/hooks/useServices";
-import { servicesService } from "@/services/services.service";
+import {
+  useServices,
+  useServiceCategories,
+  useCreateServiceCategory,
+  useDeleteService,
+  useUpdateService,
+} from "@/hooks/useServices";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageLoading } from "@/components/common/LoadingSpinner";
@@ -26,40 +31,44 @@ import { ServiceVariantManager } from "./ServiceVariantManager";
 import { formatCurrency } from "@/utils/format";
 import { formatDuration } from "@/utils/date";
 import type { ServicesViewProps } from "@/types/props";
-import type { Service } from "@/types/database";
+import type { Service, ServiceCategory } from "@/types/database";
 
 export function ServicesView({ role }: ServicesViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-  const { services, categories, isLoading, refetch } = useServices(selectedCategory);
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editService, setEditService] = useState<Service | null>(null);
   const [variantService, setVariantService] = useState<Service | null>(null);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [catName, setCatName] = useState("");
   const [catParent, setCatParent] = useState("");
-  const [savingCat, setSavingCat] = useState(false);
+
+  const { data: servicesRaw, isLoading } = useServices(selectedCategory);
+  const services = (servicesRaw ?? []) as Service[];
+  const { data: categoriesRaw } = useServiceCategories();
+  const categories = (categoriesRaw ?? []) as ServiceCategory[];
+  const createCategory = useCreateServiceCategory();
+  const deleteService = useDeleteService();
+  const updateService = useUpdateService();
 
   const isAdmin = role === "admin";
 
-  const handleCreateCategory = async () => {
+  const handleCreateCategory = () => {
     if (!catName.trim()) return;
-    setSavingCat(true);
-    await servicesService.createCategory({
-      name: catName.trim(),
-      parent_id: catParent || null,
-      is_active: true,
-    });
-    setCatName("");
-    setCatParent("");
-    setSavingCat(false);
-    setShowCategoryForm(false);
-    refetch();
+    createCategory.mutate(
+      { name: catName.trim(), parent_id: catParent || null, is_active: true },
+      {
+        onSuccess: () => {
+          setCatName("");
+          setCatParent("");
+          setShowCategoryForm(false);
+        },
+      },
+    );
   };
 
-  const toggleActive = async (service: Service) => {
-    if (service.is_active) await servicesService.deleteService(service.id);
-    else await servicesService.updateService(service.id, { is_active: true });
-    refetch();
+  const toggleActive = (service: Service) => {
+    if (service.is_active) deleteService.mutate(service.id);
+    else updateService.mutate({ id: service.id, is_active: true });
   };
 
   if (isLoading) return <PageLoading />;
@@ -199,10 +208,7 @@ export function ServicesView({ role }: ServicesViewProps) {
           <ServiceForm
             service={editService ?? undefined}
             categories={categories}
-            onSuccess={() => {
-              setShowServiceForm(false);
-              refetch();
-            }}
+            onSuccess={() => setShowServiceForm(false)}
             onCancel={() => setShowServiceForm(false)}
           />
         </DialogContent>
@@ -254,8 +260,8 @@ export function ServicesView({ role }: ServicesViewProps) {
               <Button variant="outline" onClick={() => setShowCategoryForm(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateCategory} disabled={savingCat || !catName.trim()}>
-                {savingCat ? "Saving..." : "Create Category"}
+              <Button onClick={handleCreateCategory} disabled={createCategory.isPending || !catName.trim()}>
+                {createCategory.isPending ? "Saving..." : "Create Category"}
               </Button>
             </div>
           </div>

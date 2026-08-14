@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Calendar, Users, CheckCircle, Clock } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
 import type { DatePreset } from "./DateRangeFilter";
-import { appointmentsService } from "@/services/appointments.service";
-import { staffService } from "@/services/staff.service";
+import { useStaffByProfile } from "@/hooks/useStaff";
+import { useAppointments } from "@/hooks/useAppointments";
 import { formatTime, formatDate } from "@/utils/date";
 import { AppointmentStatusBadge } from "@/components/common/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,51 +17,25 @@ import type { DateRange } from "@/services/reports.service";
 export function StaffDashboard({ userId }: { userId: string }) {
   const [preset, setPreset] = useState<DatePreset>("today");
   const [range, setRange] = useState<DateRange>(() => computeDateRange("today"));
-  const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [aptsLoading, setAptsLoading] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await staffService.getByProfileId(userId);
-        setStaffProfile(data as StaffProfile | null);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [userId]);
+  const { data: staffData, isLoading: staffLoading } = useStaffByProfile(userId);
+  const staffProfile = (staffData?.[0] ?? null) as StaffProfile | null;
 
-  useEffect(() => {
-    if (!staffProfile || !range.from || !range.to) return;
-    setAptsLoading(true);
-    const load = async () => {
-      try {
-        const { data } = await appointmentsService.getAll({
-          staffProfileId: staffProfile.id,
-          dateFrom: range.from,
-          dateTo: range.to,
-        });
-        setAppointments(
-          ((data as Appointment[]) ?? []).sort(
-            (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
-          ),
-        );
-      } finally {
-        setAptsLoading(false);
-      }
-    };
-    load();
-  }, [staffProfile, range]);
+  const { data: aptsRaw, isLoading: aptsLoading } = useAppointments(
+    staffProfile && range.from && range.to
+      ? { staffProfileId: staffProfile.id, dateFrom: range.from, dateTo: range.to }
+      : undefined,
+  );
+  const appointments = ((aptsRaw ?? []) as Appointment[]).sort(
+    (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
 
   const handleRangeChange = (p: DatePreset, r: DateRange) => {
     setPreset(p);
     setRange(r);
   };
 
-  if (loading) return <PageLoading />;
+  if (staffLoading) return <PageLoading />;
 
   const completed = appointments.filter((a) => a.status === "completed").length;
   const pending = appointments.filter((a) => a.status === "pending" || a.status === "confirmed").length;

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Plus, FileText, ChevronRight, Settings } from "lucide-react";
 import Link from "next/link";
-import { treatmentPlansService } from "@/services/treatment-plans.service";
+import { useClientTreatmentPlans, useTreatmentPlanTemplates } from "@/hooks/useTreatmentPlans";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageLoading } from "@/components/common/LoadingSpinner";
@@ -21,32 +21,20 @@ import { PLAN_STATUS_LABELS } from "@/config/constants";
 
 
 export function TreatmentPlansView({ role, userId }: TreatmentPlansViewProps) {
-  const [clientPlans, setClientPlans] = useState<ClientTreatmentPlan[]>([]);
-  const [templates, setTemplates] = useState<TreatmentPlanTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
   const [editTemplate, setEditTemplate] = useState<TreatmentPlanTemplate | null>(null);
   const [showAssign, setShowAssign] = useState(false);
 
   const isStaffOrAdmin = role === "staff" || role === "admin";
 
-  const load = useCallback(async () => {
-    const filters = role === "customer" ? { clientId: userId } : undefined;
-    const [plansResult, templatesResult] = await Promise.all([
-      treatmentPlansService.getClientPlans(filters),
-      isStaffOrAdmin ? treatmentPlansService.getTemplates() : Promise.resolve({ data: [] }),
-    ]);
-    setClientPlans((plansResult.data as unknown as ClientTreatmentPlan[]) ?? []);
-    setTemplates((templatesResult.data as TreatmentPlanTemplate[]) ?? []);
-    setLoading(false);
-  }, [role, userId, isStaffOrAdmin]);
+  const planFilter = role === "customer" ? { clientId: userId } : undefined;
+  const { data: plansRaw, isLoading: loadingPlans } = useClientTreatmentPlans(planFilter);
+  const clientPlans = (plansRaw ?? []) as ClientTreatmentPlan[];
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { data: templatesRaw, isLoading: loadingTemplates } = useTreatmentPlanTemplates();
+  const templates = isStaffOrAdmin ? ((templatesRaw ?? []) as TreatmentPlanTemplate[]) : [];
 
-  if (loading) return <PageLoading />;
+  if (loadingPlans || (isStaffOrAdmin && loadingTemplates)) return <PageLoading />;
 
   return (
     <div className="space-y-6">
@@ -192,10 +180,7 @@ export function TreatmentPlansView({ role, userId }: TreatmentPlansViewProps) {
           </DialogHeader>
           <TreatmentPlanAssign
             assignedBy={userId}
-            onSuccess={() => {
-              setShowAssign(false);
-              load();
-            }}
+            onSuccess={() => setShowAssign(false)}
             onCancel={() => setShowAssign(false)}
           />
         </DialogContent>
@@ -210,10 +195,7 @@ export function TreatmentPlansView({ role, userId }: TreatmentPlansViewProps) {
             </DialogHeader>
             <TreatmentPlanTemplateBuilder
               template={editTemplate ?? undefined}
-              onSuccess={() => {
-                setShowTemplateBuilder(false);
-                load();
-              }}
+              onSuccess={() => setShowTemplateBuilder(false)}
               onCancel={() => setShowTemplateBuilder(false)}
             />
           </DialogContent>

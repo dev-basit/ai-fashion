@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { Package } from "lucide-react";
-import { ordersService } from "@/services/orders.service";
+import { useOrders, useUpdateOrderStatus } from "@/hooks/useOrders";
 import { EmptyState } from "@/components/common/EmptyState";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,27 +14,13 @@ import type { OrderListProps } from "@/types/props";
 import type { Order, OrderStatus } from "@/types/database";
 
 export function OrderList({ role, userId }: OrderListProps) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const isAdmin = role === "admin";
+  const clientId = isAdmin ? undefined : userId;
+  const { data: ordersRaw, isLoading } = useOrders(clientId ? { clientId } : undefined);
+  const orders = (ordersRaw ?? []) as Order[];
+  const updateOrderStatus = useUpdateOrderStatus();
 
-  const load = useCallback(async () => {
-    const clientId = isAdmin ? undefined : userId;
-    const { data } = await ordersService.getAll(clientId);
-    setOrders((data as unknown as Order[]) ?? []);
-    setLoading(false);
-  }, [isAdmin, userId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const changeStatus = async (orderId: string, status: OrderStatus) => {
-    await ordersService.updateStatus(orderId, status);
-    load();
-  };
-
-  if (loading) return <PageLoading />;
+  if (isLoading) return <PageLoading />;
 
   if (orders.length === 0) {
     return (
@@ -83,7 +68,9 @@ export function OrderList({ role, userId }: OrderListProps) {
                     <Select
                       value={order.status}
                       items={ORDER_STATUS_LABELS}
-                      onValueChange={(v: unknown) => changeStatus(order.id, String(v) as OrderStatus)}
+                      onValueChange={(v: unknown) =>
+                        updateOrderStatus.mutate({ id: order.id, status: String(v) as OrderStatus })
+                      }
                     >
                       <SelectTrigger className="h-7 w-32 text-xs">
                         <SelectValue />

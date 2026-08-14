@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { ArrowLeft, Plus, CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/config/constants";
-import { treatmentPlansService } from "@/services/treatment-plans.service";
+import { useClientTreatmentPlan, useUpdateClientTreatmentPlan } from "@/hooks/useTreatmentPlans";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,48 +23,34 @@ import type {
 } from "@/types/database";
 
 export function TreatmentPlanProgress({ planId, role }: TreatmentPlanProgressProps) {
-  const [plan, setPlan] = useState<ClientTreatmentPlan | null>(null);
-  const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const isStaffOrAdmin = role === "staff" || role === "admin";
 
-  const load = useCallback(async () => {
-    const { data } = await treatmentPlansService.getClientPlanById(planId);
-    if (data) setPlan(data as unknown as ClientTreatmentPlan);
-    setLoading(false);
-  }, [planId]);
+  const { data: planRaw, isLoading } = useClientTreatmentPlan(planId);
+  const plan = planRaw as ClientTreatmentPlan | null | undefined;
+  const updatePlan = useUpdateClientTreatmentPlan();
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const addNote = async () => {
-    if (!note.trim() || !plan) return;
-    setSaving(true);
-    const next: TreatmentProgressNote[] = [
-      ...(plan.progress_notes ?? []),
-      { date: new Date().toISOString(), note: note.trim() },
-    ];
-    await treatmentPlansService.updateClientPlan(planId, { progress_notes: next });
-    setNote("");
-    setSaving(false);
-    load();
-  };
-
-  const changeStatus = async (status: PlanStatus) => {
-    await treatmentPlansService.updateClientPlan(planId, { status });
-    load();
-  };
-
-  if (loading || !plan) return <PageLoading />;
+  if (isLoading || !plan) return <PageLoading />;
 
   const ext = plan as ClientTreatmentPlan & {
     profiles?: { full_name?: string };
     treatment_plan_templates?: TreatmentPlanTemplate;
   };
   const steps = ext.treatment_plan_templates?.steps ?? [];
+
+  const addNote = () => {
+    if (!note.trim()) return;
+    const next: TreatmentProgressNote[] = [
+      ...(plan.progress_notes ?? []),
+      { date: new Date().toISOString(), note: note.trim() },
+    ];
+    updatePlan.mutate({ id: planId, progress_notes: next }, { onSuccess: () => setNote("") });
+  };
+
+  const changeStatus = (status: PlanStatus) => {
+    updatePlan.mutate({ id: planId, status });
+  };
 
   return (
     <div className="space-y-6">
@@ -153,7 +139,7 @@ export function TreatmentPlanProgress({ planId, role }: TreatmentPlanProgressPro
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Client responding well to treatment..."
               />
-              <Button size="sm" onClick={addNote} disabled={saving || !note.trim()}>
+              <Button size="sm" onClick={addNote} disabled={updatePlan.isPending || !note.trim()}>
                 <Plus className="h-4 w-4 mr-1" /> Add Note
               </Button>
             </div>

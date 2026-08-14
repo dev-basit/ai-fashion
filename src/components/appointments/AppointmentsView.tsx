@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, List, CalendarDays } from "lucide-react";
 import { useAppointments } from "@/hooks/useAppointments";
+import type { Appointment } from "@/types/database";
 import { useAppointmentsStore } from "@/store/appointments.store";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,8 @@ export function AppointmentsView({ role, userId, staffProfileId }: AppointmentsV
     ...(statusFilter !== "all" ? { status: statusFilter } : {})
   };
 
-  const { appointments, isLoading, refetch } = useAppointments(filters);
+  const { data: appointmentsRaw, isLoading, refetch } = useAppointments(filters);
+  const appointments = (appointmentsRaw ?? []) as Appointment[];
 
   return (
     <div className="space-y-6">

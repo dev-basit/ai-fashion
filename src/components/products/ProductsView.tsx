@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Plus, ShoppingBag, Search, ShoppingCart, Pencil, Trash2, MoreVertical, Package } from "lucide-react";
-import { productsService } from "@/services/products.service";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, useDeleteProduct } from "@/hooks/useProducts";
 import { useCartStore } from "@/store/cart.store";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -33,26 +32,23 @@ import type { Product } from "@/types/database";
 
 export function ProductsView({ role, userId }: ProductsViewProps) {
   const [search, setSearch] = useState("");
-  const { products, isLoading, refetch } = useProducts({ search: search || undefined });
+  const { data: productsRaw, isLoading } = useProducts({ search: search || undefined });
+  const products = (productsRaw ?? []) as Product[];
   const { addItem, items, openCart } = useCartStore();
   const isAdmin = role === "admin";
 
   const [showProductForm, setShowProductForm] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
-  const [deleting, setDeleting] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
+  const deleteProductMutation = useDeleteProduct();
 
   const cartCount = items.reduce((n, i) => n + i.quantity, 0);
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = () => {
     if (!deleteProduct) return;
-    setDeleting(true);
-    await productsService.delete(deleteProduct.id);
-    setDeleting(false);
-    setDeleteProduct(null);
-    refetch();
-  }, [deleteProduct, refetch]);
+    deleteProductMutation.mutate(deleteProduct.id, { onSuccess: () => setDeleteProduct(null) });
+  };
 
   const lowStock = products.filter((p) => p.stock_quantity <= p.low_stock_threshold);
 
@@ -204,7 +200,7 @@ export function ProductsView({ role, userId }: ProductsViewProps) {
           </TabsContent>
 
           <TabsContent value="inventory" className="mt-4">
-            <ProductInventory products={products} onRefetch={refetch} />
+            <ProductInventory products={products} onRefetch={() => {}} />
           </TabsContent>
 
           <TabsContent value="orders" className="mt-4">
@@ -332,10 +328,7 @@ export function ProductsView({ role, userId }: ProductsViewProps) {
           </DialogHeader>
           <ProductForm
             product={editProduct ?? undefined}
-            onSuccess={() => {
-              setShowProductForm(false);
-              refetch();
-            }}
+            onSuccess={() => setShowProductForm(false)}
             onCancel={() => setShowProductForm(false)}
           />
         </DialogContent>
@@ -350,7 +343,7 @@ export function ProductsView({ role, userId }: ProductsViewProps) {
         title={`Disable "${deleteProduct?.name}"?`}
         description="This product will be hidden from the catalog. Stock data is preserved."
         onConfirm={handleDelete}
-        loading={deleting}
+        loading={deleteProductMutation.isPending}
         destructive
       />
     </div>

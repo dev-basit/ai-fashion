@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { productsService } from "@/services/products.service";
+import { useState } from "react";
+import { useProductCategories, useCreateProduct, useUpdateProduct } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,6 @@ import type { Product, ProductCategory } from "@/types/database";
 
 export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) {
   const isEdit = !!product;
-  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [sku, setSku] = useState(product?.sku ?? "");
@@ -24,18 +23,13 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [categoryId, setCategoryId] = useState(product?.category_id ?? "");
   const [imageUrl, setImageUrl] = useState(product?.image_url ?? "");
   const [isForSale, setIsForSale] = useState(product?.is_for_sale ?? true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await productsService.getAllCategories();
-        setCategories(data ?? []);
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
+  const { data: categoriesRaw } = useProductCategories();
+  const categories = (categoriesRaw ?? []) as ProductCategory[];
+  const createProduct = useCreateProduct();
+  const updateProduct = useUpdateProduct();
+  const saving = createProduct.isPending || updateProduct.isPending;
 
   const save = async () => {
     if (!name.trim()) {
@@ -46,7 +40,6 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       setError("Valid price is required");
       return;
     }
-    setSaving(true);
     setError("");
     const payload: Partial<Product> = {
       name: name.trim(),
@@ -62,16 +55,13 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       is_active: true,
     };
 
-    const { error: err } = isEdit
-      ? await productsService.update(product!.id, payload)
-      : await productsService.create(payload);
-
-    setSaving(false);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      if (isEdit) await updateProduct.mutateAsync({ id: product!.id, ...payload });
+      else await createProduct.mutateAsync(payload);
+      onSuccess();
+    } catch (e) {
+      setError((e as Error).message);
     }
-    onSuccess();
   };
 
   return (

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { servicesService } from "@/services/services.service";
+import { useCreateService, useUpdateService } from "@/hooks/useServices";
 import { serviceSchema, type ServiceFormData } from "@/types/schemas/service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ export function ServiceForm({ service, categories, onSuccess, onCancel }: Servic
   const isEdit = !!service;
   const [categoryId, setCategoryId] = useState<string>(service?.category_id ?? "");
   const [error, setError] = useState<string | null>(null);
+  const createService = useCreateService();
+  const updateService = useUpdateService();
 
   const {
     register,
@@ -43,14 +45,13 @@ export function ServiceForm({ service, categories, onSuccess, onCancel }: Servic
       category_id: categoryId || null,
       is_active: true,
     };
-    const { error: err } = isEdit
-      ? await servicesService.updateService(service!.id, payload)
-      : await servicesService.createService(payload);
-    if (err) {
-      setError(err.message);
-      return;
+    try {
+      if (isEdit) await updateService.mutateAsync({ id: service!.id, ...payload });
+      else await createService.mutateAsync(payload);
+      onSuccess();
+    } catch (e) {
+      setError((e as Error).message);
     }
-    onSuccess();
   };
 
   return (
