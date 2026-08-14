@@ -237,8 +237,6 @@ export function ChatView({ userId, userRole }: ChatViewProps) {
             <DialogTitle>New Conversation</DialogTitle>
           </DialogHeader>
           <NewConversationDialog
-            userId={userId}
-            userRole={userRole}
             onCreated={async (id) => {
               setShowNewConv(false);
               await refetch();

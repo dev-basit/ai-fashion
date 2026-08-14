@@ -52,8 +52,6 @@ export type ChatViewProps = {
 };
 
 export type NewConversationDialogProps = {
-  userId: string;
-  userRole: UserRole;
   onCreated: (conversationId: string) => void;
   onCancel: () => void;
 };

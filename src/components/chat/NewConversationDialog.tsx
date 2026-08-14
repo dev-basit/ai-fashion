@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
-import { getBrowserClient } from "@/services/supabase";
+import { chatService } from "@/services/chat.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,7 +11,7 @@ import type { NewConversationDialogProps } from "@/types/props";
 import type { Profile } from "@/types/database";
 
 
-export function NewConversationDialog({ userId, userRole, onCreated, onCancel }: NewConversationDialogProps) {
+export function NewConversationDialog({ onCreated, onCancel }: NewConversationDialogProps) {
   const [search, setSearch] = useState("");
   const [recipients, setRecipients] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,62 +20,12 @@ export function NewConversationDialog({ userId, userRole, onCreated, onCancel }:
 
   useEffect(() => {
     async function load() {
-      const supabase = getBrowserClient();
-      let query = supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url, role")
-        .eq("is_active", true)
-        .neq("id", userId);
-
-      if (userRole === "customer") {
-        // Customer: only staff and admin they've had appointments with, plus all admins
-        const { data: apts } = await supabase
-          .from("appointments")
-          .select("staff_profile_id, staff_profiles(profile_id)")
-          .eq("client_id", userId);
-
-        const staffProfileIds = (apts ?? [])
-          .map((a) => (a.staff_profiles as { profile_id: string } | null)?.profile_id)
-          .filter(Boolean) as string[];
-
-        query = supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, role")
-          .eq("is_active", true)
-          .neq("id", userId)
-          .or(`role.eq.admin,id.in.(${staffProfileIds.length ? staffProfileIds.join(",") : "null"})`);
-      } else if (userRole === "staff") {
-        // Staff: assigned clients + admins
-        const { data: apts } = await supabase
-          .from("appointments")
-          .select("client_id")
-          .not("staff_profile_id", "is", null);
-
-        const staffResult = await supabase.from("staff_profiles").select("id").eq("profile_id", userId).single();
-        const staffProfileId = staffResult.data?.id;
-
-        const clientIds = staffProfileId
-          ? (
-              (await supabase.from("appointments").select("client_id").eq("staff_profile_id", staffProfileId))
-                .data ?? []
-            ).map((a) => a.client_id)
-          : [];
-
-        query = supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, role")
-          .eq("is_active", true)
-          .neq("id", userId)
-          .or(`role.eq.admin,id.in.(${clientIds.length ? clientIds.join(",") : "null"})`);
-      }
-      // admin: can message anyone — no additional filter
-
-      const { data } = await query.order("full_name");
+      const { data } = await chatService.getRecipients();
       setRecipients((data ?? []) as Profile[]);
       setLoading(false);
     }
     load();
-  }, [userId, userRole]);
+  }, []);
 
   const filtered = search
     ? recipients.filter((r) => r.full_name?.toLowerCase().includes(search.toLowerCase()))

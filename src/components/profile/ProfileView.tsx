@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { User, Mail, Phone, Calendar, Shield, Pencil, Check, X } from "lucide-react";
-import { getBrowserClient } from "@/services/supabase";
+import { profilesService } from "@/services/profiles.service";
 import { useAuthStore } from "@/store/auth.store";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,17 +28,13 @@ export function ProfileView({ profile: initialProfile, email }: ProfileViewProps
   const save = async () => {
     if (!profile) return;
     setSaving(true);
-    const supabase = getBrowserClient();
-    const { data } = await supabase
-      .from("profiles")
-      .update({ full_name: fullName.trim() || null, phone: phone.trim() || null })
-      .eq("id", profile.id)
-      .select()
-      .single();
-
+    const { data } = await profilesService.update(profile.id, {
+      full_name: fullName.trim() || null,
+      phone: phone.trim() || null,
+    });
     if (data) {
-      setProfile(data as Profile);
-      setStoreProfile(data as Profile);
+      setProfile(data);
+      setStoreProfile(data);
     }
     setSaving(false);
     setEditing(false);

@@ -1,0 +1,26 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { withAuth } from "@/lib/api-handlers";
+
+export const GET = withAuth(async (_: NextRequest, { supabase }, { params }) => {
+  const { id } = await params;
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", id).single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  return NextResponse.json({ data });
+});
+
+export const PATCH = withAuth(async (request: NextRequest, { user, supabase }, { params }) => {
+  const { id } = await params;
+
+  // Only own profile — unless caller is admin
+  if (id !== user.id) {
+    const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    if (me?.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await request.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await supabase.from("profiles").update(body as any).eq("id", id).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ data });
+});

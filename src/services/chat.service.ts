@@ -48,4 +48,11 @@ export const chatService = {
       return responseData(res.data.data);
     } catch (e) { return responseError(e); }
   },
+
+  async getRecipients() {
+    try {
+      const res = await http.get(API_ROUTES.chatRecipients);
+      return responseData(res.data.data);
+    } catch (e) { return responseError(e); }
+  },
 };

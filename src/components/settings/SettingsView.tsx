@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { settingsService } from "@/services/settings.service";
-import { getBrowserClient } from "@/services/supabase";
+import { profilesService } from "@/services/profiles.service";
+import { staffService } from "@/services/staff.service";
 import { PageHeader } from "@/components/common/PageHeader";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,9 +25,8 @@ function UsersTab() {
   const [saving, setSaving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const supabase = getBrowserClient();
-    const { data } = await supabase.from("profiles").select("*").eq("is_active", true).order("full_name");
-    setUsers((data as Profile[]) ?? []);
+    const { data } = await profilesService.getAll();
+    setUsers(data ?? []);
     setLoading(false);
   }, []);
 
@@ -36,15 +36,13 @@ function UsersTab() {
 
   const changeRole = async (userId: string, role: UserRole) => {
     setSaving(userId);
-    const supabase = getBrowserClient();
-    await supabase.from("profiles").update({ role }).eq("id", userId);
+    await profilesService.update(userId, { role });
     setSaving(null);
     load();
   };
 
   const deactivate = async (userId: string) => {
-    const supabase = getBrowserClient();
-    await supabase.from("profiles").update({ is_active: false }).eq("id", userId);
+    await profilesService.update(userId, { is_active: false });
     load();
   };
 
@@ -226,9 +224,8 @@ function StaffScheduleTab({ profileId }: { profileId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const supabase = getBrowserClient();
-        const { data } = await supabase.from("staff_profiles").select("id").eq("profile_id", profileId).single();
-        if (data) setStaffProfileId(data.id);
+        const { data } = await staffService.getByProfileId(profileId);
+        if (data && data.length > 0) setStaffProfileId(data[0].id);
       } catch { /* ignore */ }
     };
     load();
@@ -292,8 +289,7 @@ export function SettingsView({ profile }: SettingsViewProps) {
   const saveProfile = async () => {
     if (!profile) return;
     setSavingProfile(true);
-    const supabase = getBrowserClient();
-    await supabase.from("profiles").update({ full_name: fullName, phone }).eq("id", profile.id);
+    await profilesService.update(profile.id, { full_name: fullName, phone });
     setSavingProfile(false);
   };
 

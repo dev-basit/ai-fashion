@@ -59,6 +59,10 @@ export const API_ROUTES = {
   chatConversationById: (id: string) => `/chat/conversations/${id}`,
   chatMessages: (id: string) => `/chat/conversations/${id}/messages`,
   chatMarkRead: (id: string) => `/chat/conversations/${id}/read`,
+  chatRecipients: "/chat/recipients",
+  // Profiles
+  profiles: "/profiles",
+  profileById: (id: string) => `/profiles/${id}`,
   // Me
   me: "/me",
 } as const;
