@@ -331,10 +331,10 @@ Database
 
 ### Supabase Clients
 
-| Client                                   | When to Use                                                  |
-| ---------------------------------------- | ------------------------------------------------------------ |
-| `get_db()` (from `app.core.context`)     | In services — RLS-scoped client set by middleware per request |
-| `get_admin_db_client()` (from supabase)  | Bypass RLS: user creation, notifications, privileged ops     |
+| Client                                  | When to Use                                                   |
+| --------------------------------------- | ------------------------------------------------------------- |
+| `get_db()` (from `app.core.context`)    | In services — RLS-scoped client set by middleware per request |
+| `get_admin_db_client()` (from supabase) | Bypass RLS: user creation, notifications, privileged ops      |
 
 ---
 
@@ -345,14 +345,22 @@ Database
 ```
 POST /ai/chat
   ↓ auth_middleware — JWT validated, context vars set
-  ↓ Rate limit check (ai_usage table)
-  ↓ graph.astream() — invoke LangGraph
+  ↓ role queried from profiles table
+  ↓ rate limit check via ai_service (admin client — ai_usage table)
+  ↓ conversation ownership verified
+  ↓ history loaded from ai_messages (admin client)
+  ↓ usage incremented + user message saved + auto-title on first message
+  ↓ graph.astream({ messages+history, user_role, context: "" },
+                  config={access_token, user_id, timezone})
       ├── agent node — bind role-scoped tools, call LLM
       ├── retrieve node — embed query, cosine search, build context
-      ├── tools node — execute tool calls (each calls service via get_db())
+      ├── tools node — execute tool calls (services use get_db() from context)
       └── loop until END
   ↓ StreamingResponse — yield chunks back to client
+  ↓ assistant response saved to ai_messages on completion
 ```
+
+`ai_service.py` handles all persistence (rate limits, history, message saving, RAG search) using `get_admin_db_client()` since those tables require bypass of RLS.
 
 ### Knowledge Base
 

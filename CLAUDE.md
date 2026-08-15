@@ -623,12 +623,18 @@ The `/dashboard/ai-assistant` page provides a role-aware RAG + tool-calling chat
 ```
 POST /ai/chat
   → auth_middleware sets context vars (JWT already validated)
-  → rate limit check (ai_usage table, AI_DAILY_LIMIT per day)
-  → graph.astream({ messages, user_role, context: "" }, config={user_id, timezone})
+  → role queried from profiles table via get_db()
+  → rate limit check — ai_service.check_rate_limit() via get_admin_db_client()
+  → conversation ownership verified — ai_service.verify_conversation_owner()
+  → history loaded — ai_service.load_history() via get_admin_db_client()
+  → usage incremented + user message saved + auto-title on first message (admin client)
+  → graph.astream({ messages+history, user_role, context: "" },
+                  config={access_token, user_id, timezone})
       agent node: bind role-scoped tools → invoke LLM
       retrieve node: embed query → cosine search → build context string
-      tools node: ToolNode executes tool calls (each calls service functions via get_db())
+      tools node: ToolNode executes tool calls (services use get_db() from context)
   → StreamingResponse back to client (text/plain chunks)
+  → assistant response saved to ai_messages on completion (admin client)
 ```
 
 **Knowledge base workflow**:
@@ -665,15 +671,16 @@ Tools call service functions directly — no HTTP round-trip. The RLS-scoped `ge
 
 **Key files**:
 
-| File                                           | Purpose                                       |
-| ---------------------------------------------- | --------------------------------------------- |
-| `backend/knowledge-base.md`                    | Source document — edit here, then re-ingest   |
-| `backend/app/ai/graph.py`                      | Compiled LangGraph                            |
-| `backend/app/ai/rag.py`                        | `retrieve` node — cosine similarity search    |
-| `backend/app/ai/agent.py`                      | `agent` node + `route_agent` conditional edge |
-| `backend/app/ai/tools/`                        | Role-scoped tool implementations              |
-| `backend/app/routes/ai.py`                     | Streaming POST handler + conversations CRUD   |
-| `frontend/src/components/ai/AssistantChat.tsx` | Chat UI — streaming, rate-limit display       |
+| File                                           | Purpose                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `backend/knowledge-base.md`                    | Source document — edit here, then re-ingest                    |
+| `backend/app/ai/graph.py`                      | Compiled LangGraph                                             |
+| `backend/app/ai/rag.py`                        | `retrieve` node — cosine similarity search                     |
+| `backend/app/ai/agent.py`                      | `agent` node + `route_agent` conditional edge                  |
+| `backend/app/ai/tools/`                        | Role-scoped tool implementations + `get_role_tools()` dispatch |
+| `backend/app/routes/ai.py`                     | Streaming POST handler + conversations CRUD                    |
+| `backend/app/services/ai_service.py`           | Rate limiting, history, message persistence, RAG search        |
+| `frontend/src/components/ai/AssistantChat.tsx` | Chat UI — streaming, rate-limit display                        |
 
 ---
 
