@@ -9,7 +9,6 @@ import { X } from "lucide-react";
 import { APPOINTMENT_FILTER_OPTIONS } from "@/config/constants";
 import type { AppointmentStatus, StaffProfile, Service } from "@/types/database";
 
-
 export function AppointmentFilters({ showProvider = true }: { showProvider?: boolean }) {
   const {
     statusFilter,

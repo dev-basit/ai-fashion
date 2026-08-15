@@ -54,4 +54,6 @@ export const QK = {
   chatConversations: ()               => ["chat", "conversations"],
   chatMessages: (convId: string)      => ["chat", "messages", convId],
   chatRecipients: ()                  => ["chat", "recipients"],
+  aiConversations: ()                 => ["ai", "conversations"],
+  aiMessages: (convId: string)        => ["ai", "messages", convId],
 } as const;

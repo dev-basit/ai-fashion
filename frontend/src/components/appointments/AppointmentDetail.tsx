@@ -31,7 +31,6 @@ import { APPOINTMENT_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/config/con
 import type { AppointmentDetailProps } from "@/types/props";
 import type { Appointment, AppointmentStatus, PaymentStatus, Product, AppointmentProduct } from "@/types/database";
 
-
 export function AppointmentDetail({ appointmentId, role }: AppointmentDetailProps) {
   const [showEdit, setShowEdit] = useState(false);
   const [notes, setNotes] = useState<string | null>(null);

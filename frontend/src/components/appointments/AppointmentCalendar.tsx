@@ -11,7 +11,6 @@ import { APPOINTMENT_CALENDAR_COLORS } from "@/config/colors";
 import type { AppointmentCalendarProps } from "@/types/props";
 import type { Appointment } from "@/types/database";
 
-
 export function AppointmentCalendar({ appointments }: AppointmentCalendarProps) {
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);

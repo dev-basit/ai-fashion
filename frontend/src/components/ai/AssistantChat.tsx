@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Send, Bot, User, Loader2, AlertCircle, Plus, Trash2, MessageSquare, ChevronLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn, toAIChatMessage, relativeTime } from "@/lib/utils";
+import { cn, relativeTime } from "@/lib/utils";
 import type { AIChatMessage } from "@/types/props";
-import type { AiConversation, AiMessage } from "@/types/database";
+import type { AiConversation } from "@/types/database";
 import { SUGGESTED_QUESTIONS } from "@/config/ai";
-import { aiConversationsService } from "@/services/ai-conversations.service";
+import { useAIConversations, useAIMessages, useCreateAIConversation, useDeleteAIConversation } from "@/hooks/useAI";
 import { getBrowserClient } from "@/services/supabase";
 import { useAIStore } from "@/store/ai.store";
 import { useAuth } from "@/hooks/useAuth";
+import { QK } from "@/config/query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { env } from "@/config/config";
@@ -18,12 +20,15 @@ import { env } from "@/config/config";
 export function AssistantChat() {
   const { user } = useAuth();
   const { activeConversationId, setActiveConversationId } = useAIStore();
+  const qc = useQueryClient();
+
+  const { data: conversations = [], isLoading: isLoadingConvs } = useAIConversations();
+  const { data: fetchedMessages = [], isLoading: isLoadingMessages } = useAIMessages(activeConversationId);
+  const createConversation = useCreateAIConversation();
+  const deleteConversation = useDeleteAIConversation();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [conversations, setConversations] = useState<AiConversation[]>([]);
-  const [isLoadingConvs, setIsLoadingConvs] = useState(true);
-  const [messages, setMessages] = useState<AIChatMessage[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [localMessages, setLocalMessages] = useState<AIChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -32,62 +37,36 @@ export function AssistantChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load conversations on mount
+  // Sync fetched messages into local state (initial load + after conversation switch)
   useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await aiConversationsService.getConversations();
-        if (data) setConversations(data as unknown as AiConversation[]);
-      } finally {
-        setIsLoadingConvs(false);
-      }
-    };
-    load();
-  }, []);
-
-  // Load messages when active conversation changes
-  useEffect(() => {
-    if (!activeConversationId) {
-      setMessages([]);
-      return;
+    if (!isStreaming) {
+      setLocalMessages(fetchedMessages);
     }
-    setIsLoadingMessages(true);
-    const load = async () => {
-      try {
-        const { data } = await aiConversationsService.getMessages(activeConversationId);
-        if (data) setMessages((data as unknown as AiMessage[]).map(toAIChatMessage));
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-    load();
-  }, [activeConversationId]);
+  }, [fetchedMessages, isStreaming]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [localMessages]);
 
   const isRateLimited = remaining !== null && remaining <= 0;
 
   const handleNewChat = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await aiConversationsService.createConversation();
-    if (error || !data) return;
-    setConversations((prev) => [data as AiConversation, ...prev]);
-    setActiveConversationId(data.id);
-    setMessages([]);
+    const newConv = await createConversation.mutateAsync();
+    setActiveConversationId(newConv.id);
+    setLocalMessages([]);
     setInput("");
     setSidebarOpen(false);
     setTimeout(() => inputRef.current?.focus(), 50);
-  }, [user, setActiveConversationId]);
+  }, [user, setActiveConversationId, createConversation]);
 
   const handleSelectConversation = useCallback(
     (id: string) => {
       if (id === activeConversationId) return;
       setActiveConversationId(id);
       setInput("");
-      setSidebarOpen(false); // auto-collapse on small screens; lg:flex keeps it visible on desktop
+      setSidebarOpen(false);
     },
     [activeConversationId, setActiveConversationId],
   );
@@ -95,14 +74,13 @@ export function AssistantChat() {
   const handleDelete = useCallback(
     async (conversationId: string, e: React.MouseEvent) => {
       e.stopPropagation();
-      await aiConversationsService.deleteConversation(conversationId);
-      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+      await deleteConversation.mutateAsync(conversationId);
       if (activeConversationId === conversationId) {
         setActiveConversationId(null);
-        setMessages([]);
+        setLocalMessages([]);
       }
     },
-    [activeConversationId, setActiveConversationId],
+    [activeConversationId, setActiveConversationId, deleteConversation],
   );
 
   const send = useCallback(
@@ -112,25 +90,25 @@ export function AssistantChat() {
 
       setInput("");
 
-      const isFirstMessage = messages.length === 0;
+      const isFirstMessage = localMessages.length === 0;
 
       // Optimistic UI: add user + empty assistant messages
       const userMsg: AIChatMessage = { id: crypto.randomUUID(), role: "user", content: message };
       const assistantId = crypto.randomUUID();
       const assistantMsg: AIChatMessage = { id: assistantId, role: "assistant", content: "" };
-      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setLocalMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsStreaming(true);
 
-      // Optimistically update sidebar title + bump to top
+      // Optimistically update conversation title + bump to top in cache
       if (isFirstMessage) {
         const title = message.slice(0, 50).trim();
-        setConversations((prev) =>
+        qc.setQueryData(QK.aiConversations(), (prev: AiConversation[] = []) =>
           prev.map((c) =>
             c.id === activeConversationId ? { ...c, title, updated_at: new Date().toISOString() } : c,
           ),
         );
       } else {
-        setConversations((prev) => {
+        qc.setQueryData(QK.aiConversations(), (prev: AiConversation[] = []) => {
           const hit = prev.find((c) => c.id === activeConversationId);
           if (!hit) return prev;
           return [
@@ -166,7 +144,7 @@ export function AssistantChat() {
         if (res.status === 429) {
           const body = await res.json();
           const errMsg = body?.detail?.message ?? "Daily AI limit reached. Resets at midnight.";
-          setMessages((prev) =>
+          setLocalMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: errMsg, isError: true } : m)),
           );
           return;
@@ -181,12 +159,12 @@ export function AssistantChat() {
           const { done, value } = await reader.read();
           if (done) break;
           const token = decoder.decode(value, { stream: true });
-          setMessages((prev) =>
+          setLocalMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: m.content + token } : m)),
           );
         }
       } catch {
-        setMessages((prev) =>
+        setLocalMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
               ? { ...m, content: "Sorry, I couldn't process your request. Please try again.", isError: true }
@@ -196,9 +174,10 @@ export function AssistantChat() {
       } finally {
         setIsStreaming(false);
         inputRef.current?.focus();
+        qc.invalidateQueries({ queryKey: QK.aiConversations() });
       }
     },
-    [input, isStreaming, isRateLimited, activeConversationId, messages.length],
+    [input, isStreaming, isRateLimited, activeConversationId, localMessages.length, qc],
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -329,7 +308,7 @@ export function AssistantChat() {
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
-              ) : messages.length === 0 ? (
+              ) : localMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-12">
                   <div className="rounded-full bg-primary/10 p-4">
                     <Bot className="h-8 w-8 text-primary" />
@@ -353,7 +332,7 @@ export function AssistantChat() {
                   </div>
                 </div>
               ) : (
-                messages.map((msg) => (
+                localMessages.map((msg) => (
                   <div
                     key={msg.id}
                     className={cn("flex gap-3 max-w-3xl", msg.role === "user" ? "ml-auto flex-row-reverse" : "")}

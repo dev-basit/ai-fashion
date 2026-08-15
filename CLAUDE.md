@@ -99,7 +99,7 @@ frontend/src/
     (auth)/              # Login, forgot-password (unauthenticated layout)
     api/
       auth/callback/     # ONLY remaining Next.js route — Supabase auth code exchange
-    dashboard/           # Authenticated dashboard pages (server components by default)
+    dashboard/           # Authenticated dashboard pages (all client components using useAuth hook)
     globals.css
     layout.tsx           # Root layout — wraps with <Providers>
     page.tsx             # Landing page
@@ -128,7 +128,7 @@ frontend/src/
     query.ts             # TanStack Query: queryClient defaults + QK key factory
   hooks/                 # TanStack Query hooks — one file per domain
   lib/
-    utils.ts             # cn(), responseData(), responseError(), relativeTime()
+    utils.ts             # cn(), responseData(), responseError(), relativeTime() — (auth.ts deleted: use useAuth hook instead)
   providers/
     index.tsx            # <QueryProvider> → <ThemeProvider> → <ThemePickerModal> → <AuthProvider>
     QueryProvider.tsx
@@ -207,19 +207,19 @@ backend/
 
 ### Next.js 16 Breaking Changes
 
-- **`params` is a `Promise`** — always `await params` in page/layout components.
-- **`cookies()` and `headers()` are async** — `const cookieStore = await cookies();`
+- **`params` is a `Promise`** — In client components, use `useParams()` (returns a synchronous object). In server components (rarely used now), always `await params`.
+- **`cookies()` and `headers()` are async** — `const cookieStore = await cookies();` (server components only)
 - **Middleware file is `proxy.ts`** (not `middleware.ts`) — export named `proxy` function + `config` matcher.
-- **`useSearchParams` requires `<Suspense>` boundary**.
+- **`useSearchParams` requires `<Suspense>` boundary** (client components only).
 
 ### Supabase Clients (Frontend)
 
 | Client               | Import                       | Use in                                                   |
 | -------------------- | ---------------------------- | -------------------------------------------------------- |
 | `getBrowserClient()` | `@/services/supabase`        | Client components only — Realtime, `http.ts` auth header |
-| `getServerClient()`  | `@/services/supabase-server` | Server components only (reads session cookies)           |
+| `getServerClient()`  | `@/services/supabase-server` | Auth callback route handler only (`app/api/auth/callback`) |
 
-**Never import `supabase-server` or `supabase-admin` into a client component.**
+**Never import Supabase directly into dashboard pages or regular components.** Use `useAuth()` hook from `@/hooks/useAuth` for auth state, and TanStack Query hooks for data fetching.
 
 ### Supabase Clients (Backend)
 
@@ -340,9 +340,9 @@ import type { DatePreset } from "@/components/dashboard/DateRangeFilter";
 
 ## Data Fetching — TanStack Query
 
-**Components must never import services or `http` directly.** All data fetching goes through hooks in `src/hooks/`.
+**Components must never import services, `http`, or Supabase directly.** All data fetching goes through hooks in `src/hooks/`.
 
-### Request chain
+### Request chain (data fetching)
 
 ```
 Component
@@ -356,6 +356,26 @@ Component
                               ─ OR ─
                           → get_admin_client() for privileged ops
 ```
+
+### Auth state (not server-side)
+
+**All dashboard pages are now `"use client"` components.**
+
+```tsx
+"use client";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+
+export default function MyPage() {
+  const { user, profile, isLoading } = useAuth();
+  
+  if (isLoading) return <LoadingSpinner />;
+  
+  return <MyComponent userId={user!.id} role={profile?.role ?? "customer"} />;
+}
+```
+
+The `useAuth()` hook reads from Zustand `useAuthStore`, which is initialized by `AuthProvider` on app mount with user/profile from Supabase session.
 
 ### Hook pattern
 
@@ -400,6 +420,7 @@ QK.reports(type, from, to)
 QK.settings(key?)
 QK.profiles()  QK.profile(id)
 QK.chatConversations()  QK.chatMessages(convId)  QK.chatRecipients()
+QK.aiConversations()  QK.aiMessages(convId)
 ```
 
 ### QueryClient defaults
@@ -425,8 +446,9 @@ staleTime: 2 min  |  gcTime: 10 min  |  retry: 1  |  refetchOnWindowFocus: false
 | `useProfiles.ts`       | `useAllProfiles`, `useProfile`, `useUpdateProfile`                                                                                                                                                                                                            |
 | `useChat.ts`           | `useConversations`, `useCreateConversation`, `useMessages`, `useChatRecipients`                                                                                                                                                                               |
 | `useNotifications.ts`  | `useNotifications`, `useUnreadCount`, `useMarkNotificationRead`, `useMarkAllRead`                                                                                                                                                                             |
+| `useAI.ts`             | `useAIConversations`, `useAIMessages`, `useCreateAIConversation`, `useDeleteAIConversation`                                                                                                                                                                   |
 
-**Exception**: `src/components/ai/AssistantChat.tsx` directly imports `aiConversationsService` — the only permitted direct service import in a component.
+**Rule**: No component imports services directly. All data fetching goes through hooks in `src/hooks/`. The streaming AI chat (`fetch()` to `/ai/chat`) is the only intentional direct API call, kept in `AssistantChat.tsx` because it uses Server-Sent Events (not cacheable by TanStack Query).
 
 ### `useStaffByProfile` returns an array
 
@@ -635,14 +657,18 @@ def get_my_appointments(
 
 ## Common Gotchas
 
-- **No direct `http` imports in components**: All data fetching through `src/hooks/` (TanStack Query). Only exception: `AssistantChat.tsx` + `aiConversationsService`.
+- **All dashboard pages are `"use client"` components**: Use `useAuth()` hook to access `user` and `profile`. Do NOT use server-side `getCurrentUserDetails()` (deleted). Pages should always show `<LoadingSpinner />` while `isLoading` is true.
+- **No useEffect + service calls**: All service calls moved to TanStack Query hooks. No pattern like `useEffect(() => { const load = async () => { await service.fetch() }` allowed. If data is needed, create a hook (e.g., `useAIConversations`).
+- **No direct `http` imports in components**: All data fetching through `src/hooks/` (TanStack Query). Streaming SSE (`fetch()` to `/ai/chat`) is intentional exception in `AssistantChat.tsx`.
+- **No direct Supabase queries in components**: `useAuth()` is for auth state (reads from Zustand store). Use TanStack Query hooks (like `useProduct()`, `useClient()`, `useStaffMember()`, `useAIConversations()`) for entity data fetching via backend API.
 - **Services are thin HTTP clients**: `*.service.ts` call FastAPI via `http.ts`. They do not touch Supabase.
 - **Backend uses sync `def` for Supabase routes**: FastAPI runs sync handlers in a thread pool — no blocking.
 - **`get_admin_client()` only for bypass**: use in backend services only when explicitly skipping RLS.
 - **Cache invalidation is automatic**: `onSuccess` → `qc.invalidateQueries(...)` triggers refetch. Components don't call `refetch()` manually.
 - **npm install**: always `npm install --legacy-peer-deps --cache /tmp/npm-cache-glow`.
 - **Supabase Realtime** for chat (`src/hooks/useRealtime.ts`). No custom WebSocket server.
-- **`useSearchParams`** must be inside `<Suspense>` boundary.
+- **`useSearchParams`** must be inside `<Suspense>` boundary (client components).
+- **`useParams()` in client components** returns a synchronous object (unlike server components where params is a Promise).
 - **Logo**: use `LogoSidebar`, `LogoIcon`, `LogoAuth` from `src/components/common/Logo.tsx`.
 - **`supabase db reset` is destructive** — always ask before running.
 - **Staff names visible to customers** — `profiles_select_authenticated` RLS policy (migration 0003).

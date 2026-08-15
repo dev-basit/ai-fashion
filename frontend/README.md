@@ -1,36 +1,131 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Glow By Miral — Frontend
 
-## Getting Started
+Premium salon/spa management platform built with **Next.js 16** + **React 19** + **TypeScript** + **TanStack Query**.
 
-First, run the development server:
+## Architecture
+
+**Pure UI layer** — All business logic, database queries, and Supabase interactions live in the backend. This frontend calls the FastAPI backend via `src/services/http.ts` (axios with Bearer token injection).
+
+**All dashboard pages are client components** (`"use client"`):
+
+- Use `useAuth()` hook to access authenticated user/profile from Zustand store
+- Use TanStack Query hooks (e.g., `useProduct()`, `useClient()`) for entity data fetching via backend API
+- Never import Supabase or `http.ts` directly in components
+
+## Setup
 
 ```bash
+# Install dependencies (always use these flags)
+npm install --legacy-peer-deps --cache /tmp/npm-cache-glow
+
+# Set environment variables
+cp .env.example .env.local
+# Update NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, NEXT_PUBLIC_BACKEND_URL
+
+# Start dev server (port 3000)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev          # Start dev server
+npm run build        # Production build
+npm run lint         # ESLint
+npx tsc --noEmit     # Type-check
+npx prettier --write "src/**/*.{ts,tsx,css,json}" "*.{ts,tsx,mjs,json}"  # Format
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
+| Layer       | Library          | Version | Notes                                          |
+| ----------- | ---------------- | ------- | ---------------------------------------------- |
+| Framework   | Next.js          | 16.2.11 | Pure UI — no API routes except `auth/callback` |
+| Runtime     | React            | 19.2.4  | Server/client component pattern                |
+| Language    | TypeScript       | ^5      | Strict mode                                    |
+| State Mgmt  | Zustand + Query  | ^5      | Persisted auth store + TanStack Query for data |
+| Forms       | react-hook-form  | ^7      | With zod validation (`z` from `zod/v4`)        |
+| UI Library  | shadcn base-nova | ^1.7    | Base UI primitives (not standard Radix)        |
+| HTTP        | axios            | ^1      | Bearer JWT injected, points to backend API     |
+| Styling     | Tailwind CSS     | ^4      | Black & white only, semantic tokens            |
+| Calendar    | FullCalendar     | ^6.1.21 | Must stay on v6 (v7 breaks all plugins)        |
+| Date Picker | react-day-picker | via UI  | Wrapped in `date-picker.tsx`                   |
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Frontend `.env.local`** (all public, prefixed with `NEXT_PUBLIC_`):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+NEXT_PUBLIC_SUPABASE_URL               # Supabase project URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY   # Supabase publishable/anon key
+NEXT_PUBLIC_BACKEND_URL                # Backend API URL (default: http://localhost:8000)
+```
 
-## Deploy on Vercel
+Access via `src/config/config.ts` — **never** `process.env` directly.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Key Folders
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/dashboard/              # All client components using useAuth() + TanStack Query hooks
+  components/                 # Reusable React components
+  hooks/                       # TanStack Query hooks (one file per domain)
+  store/                       # Zustand stores (auth, cart, ui, etc.)
+  services/                    # Thin HTTP clients calling backend API
+  config/                      # Constants, env config, TanStack Query setup
+```
+
+## Critical Rules
+
+- **Dashboard pages are `"use client"`**: Always use `useAuth()` for auth state. Show `<LoadingSpinner />` while loading.
+- **No useEffect + service calls**: All service calls go through TanStack Query hooks (e.g., `useAIConversations()`, `useProducts()`). Never write `useEffect(() => { await service.fetch() })`.
+- **No direct Supabase in components**: Use TanStack Query hooks for data. Auth comes from `useAuth()` hook.
+- **No direct `http` imports in components**: All fetching through hooks in `src/hooks/`. Streaming SSE is the only exception (SSE in `AssistantChat.tsx`).
+- **Base UI, not Radix**: No `asChild` prop, no Radix imports. Use `@base-ui/react/*` instead.
+- **Date pickers**: Never use `<input type="date">`. Use `DatePicker` / `DateTimePicker` from `@/components/ui/date-picker`.
+- **Form pattern**: `useForm()` + `zodResolver` + `watch()` + `setValue()`, not `register()` for date pickers.
+
+## Data Fetching Pattern
+
+All components fetch data through TanStack Query hooks defined in `src/hooks/`:
+
+```tsx
+"use client";
+import { useAIConversations, useAIMessages } from "@/hooks/useAI";
+
+export function MyComponent() {
+  // Automatic caching + refetching
+  const { data: conversations = [], isLoading } = useAIConversations();
+  const { data: messages = [] } = useAIMessages(activeConvId);
+  
+  if (isLoading) return <LoadingSpinner />;
+  
+  return <div>{/* render conversations + messages */}</div>;
+}
+```
+
+**Never do this:**
+```tsx
+// ❌ WRONG: useEffect + service call
+useEffect(() => {
+  const load = async () => {
+    const { data } = await aiConversationsService.getConversations();
+    setConversations(data);
+  };
+  load();
+}, []);
+```
+
+### Available Hooks by Domain
+
+| Domain | Hooks |
+|--------|-------|
+| **AI** | `useAIConversations()`, `useAIMessages(convId)`, `useCreateAIConversation()`, `useDeleteAIConversation()` |
+| **Chat** | `useConversations()`, `useMessages(convId)`, `useCreateConversation()` |
+| **Appointments** | `useAppointments()`, `useAppointment(id)`, `useCreateAppointment()`, `useUpdateAppointmentStatus()` |
+| **Clients** | `useClients(search)`, `useClient(id)`, `useCreateClient()`, `useUpdateClient()` |
+| **Products** | `useProducts(filters)`, `useProduct(id)`, `useCreateProduct()`, `useUpdateProduct()` |
+| **Staff** | `useStaff()`, `useStaffMember(id)`, `useStaffByProfile(userId)`, `useStaffSchedule(id)` |
+| **Services** | `useServices(catId)`, `useService(id)`, `useServiceCategories()`, `useCreateService()` |
+
+For complete architectural details, see `../CLAUDE.md`.
