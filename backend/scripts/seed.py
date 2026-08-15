@@ -6,6 +6,7 @@ Run from the backend/ directory:
 
 import sys
 from app.core.supabase import get_admin_db_client
+from app.config.config import config
 from app.utils.product_svgs import PRODUCT_SVGS
 from app.utils.seed_data import (
     BUSINESS_SETTINGS,
@@ -35,7 +36,7 @@ def seed_users() -> list[dict]:
     for u in users:
         existing_users = supabase.auth.admin.list_users()
         existing_user = next(
-            (x for x in existing_users.users if x.email == u["email"]),
+            (x for x in existing_users if x.email == u["email"]),
             None,
         )
         if existing_user:
@@ -135,7 +136,7 @@ def seed_products(supabase) -> None:
     bucket_name = "product-images"
     exists = any(b.name == bucket_name for b in buckets)
     if not exists:
-        supabase.storage.create_bucket(bucket_name, {"public": True})
+        supabase.storage.create_bucket(bucket_name, options={"public": True})
         print(f'  ✓ Created bucket "{bucket_name}"')
     else:
         print(f'  ✓ Bucket "{bucket_name}" already exists')
@@ -149,10 +150,9 @@ def seed_products(supabase) -> None:
         supabase.storage.from_(bucket_name).upload(
             path,
             buffer,
-            {"contentType": "image/svg+xml", "upsert": True},
+            {"content-type": "image/svg+xml", "upsert": "true"},
         )
-        url_data = supabase.storage.from_(bucket_name).get_public_url(path)
-        image_urls[key] = url_data["publicUrl"]
+        image_urls[key] = supabase.storage.from_(bucket_name).get_public_url(path)
         print(f"  ✓ {key}")
 
     print("\n→ Creating product categories...")
@@ -219,7 +219,7 @@ def main() -> None:
     print("╚═══════════════════════════════╝")
 
     supabase = get_admin_db_client()
-    print(f"  Supabase: {supabase.url}")
+    print(f"  Supabase: {config.supabase_url}")
 
     users = seed_users()
     admin_user = next(u for u in users if u["role"] == "admin")
