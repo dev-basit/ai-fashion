@@ -116,4 +116,5 @@ def match_documents(embedding: list[float], user_role: str, limit: int = 5) -> l
         "match_count": limit,
         "user_role": user_role,
     }).execute()
-    return result.data or []
+    data = result.data if result is not None else None
+    return data if isinstance(data, list) else []

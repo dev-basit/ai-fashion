@@ -51,7 +51,8 @@ async def ai_chat(body: dict):
     token = get_token()
 
     profile = db.table("profiles").select("role").eq("id", user.id).single().execute()
-    user_role: str = (profile.data or {}).get("role", "customer")
+    profile_data = profile.data if profile is not None else None
+    user_role: str = profile_data.get("role", "customer") if isinstance(profile_data, dict) else "customer"
 
     today = date.today().isoformat()
     call_count, is_limited = ai_service.check_rate_limit(user.id, today)
@@ -90,9 +91,11 @@ async def ai_chat(body: dict):
                 config={"configurable": {"access_token": token, "user_id": user.id, "timezone": timezone_str}},
                 stream_mode="messages",
             ):
-                if meta.get("langgraph_node") == "agent" and isinstance(chunk.content, str) and chunk.content:
-                    full_response += chunk.content
-                    yield chunk.content
+                if meta.get("langgraph_node") == "agent":
+                    content = chunk.content
+                    if isinstance(content, str) and content:
+                        full_response += content
+                        yield content
         except Exception:
             err = "Sorry, something went wrong. Please try again."
             full_response = err

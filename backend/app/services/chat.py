@@ -45,7 +45,7 @@ def create_conversation(recipient_id: str) -> dict:
 
 def is_member(conversation_id: str) -> bool:
     user = get_current_user()
-    data = (
+    result = (
         get_admin_db_client()
         .table("conversation_participants")
         .select("conversation_id")
@@ -53,8 +53,8 @@ def is_member(conversation_id: str) -> bool:
         .eq("profile_id", user.id)
         .maybe_single()
         .execute()
-        .data
     )
+    data = result.data if result is not None else None
     return data is not None
 
 

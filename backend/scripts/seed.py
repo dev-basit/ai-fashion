@@ -5,7 +5,7 @@ Run from the backend/ directory:
 """
 
 import sys
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.utils.product_svgs import PRODUCT_SVGS
 from app.utils.seed_data import (
     BUSINESS_SETTINGS,
@@ -20,7 +20,7 @@ from app.utils.seed_data import (
 def seed_users() -> list[dict]:
     """Create admin, staff, and customer users."""
     print("\n→ Creating users...")
-    supabase = get_admin_client()
+    supabase = get_admin_db_client()
 
     users = [
         {"email": "admin@gmail.com", "name": "Admin", "role": "admin", "phone": "+1 (555) 001-0001"},
@@ -42,16 +42,19 @@ def seed_users() -> list[dict]:
             supabase.auth.admin.delete_user(existing_user.id)
             print(f"  Removed existing {u['email']}")
 
-        user = supabase.auth.admin.create_user(
+        user_resp = supabase.auth.admin.create_user(
             email=u["email"],
             password="1234qwer",
             email_confirm=True,
             user_metadata={"full_name": u["name"]},
         )
-        print(f"  ✓ {u['role']}: {u['email']} ({user.user.id})")
+        if user_resp.user is None:
+            raise ValueError(f"Failed to create user {u['email']}")
+        user_id = user_resp.user.id
+        print(f"  ✓ {u['role']}: {u['email']} ({user_id})")
         created.append(
             {
-                "id": user.user.id,
+                "id": user_id,
                 "email": u["email"],
                 "name": u["name"],
                 "role": u["role"],
