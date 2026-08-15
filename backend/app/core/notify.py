@@ -1,6 +1,6 @@
 from typing import Optional
 
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 
 
 def notify_user_and_admins(
@@ -8,7 +8,7 @@ def notify_user_and_admins(
     payload: dict,
     exclude_id: Optional[str] = None,
 ) -> None:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     admin_ids = [
         r["id"]
         for r in (

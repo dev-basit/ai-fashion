@@ -2,7 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.orders import Order
 
 
@@ -54,7 +54,7 @@ def create_order(body: dict) -> dict:
         for i in items
     ]).execute()
 
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     product_ids = [i["product_id"] for i in items]
     products = admin.table("products").select("id, stock_quantity").in_("id", product_ids).execute().data or []
     for item in items:

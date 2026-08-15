@@ -3,7 +3,7 @@ from typing import Optional
 
 from app.core.context import get_db
 from app.core.notify import notify_admins, notify_user_and_admins
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.appointments import AppointmentDetail
 
 

@@ -1,7 +1,4 @@
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException, Query
-
 from app.services import chat as chat_svc
 
 router = APIRouter(tags=["chat"])

@@ -1,12 +1,12 @@
 from typing import Optional
 
 from app.core.context import get_db
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.profiles import Profile
 
 
 def list_clients(search: Optional[str] = None) -> list:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     query = (
         admin.table("profiles")
         .select("*")
@@ -20,7 +20,7 @@ def list_clients(search: Optional[str] = None) -> list:
 
 
 def get_client(client_id: str) -> Profile | None:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     result = admin.table("profiles").select("*").eq("id", client_id).maybe_single().execute()
     if result is None or result.data is None:
         return None
@@ -28,7 +28,7 @@ def get_client(client_id: str) -> Profile | None:
 
 
 def create_client(body: dict) -> Profile:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     email = body["email"]
     password = body["password"]
     full_name = body["full_name"]
@@ -50,7 +50,7 @@ def create_client(body: dict) -> Profile:
 
 def update_client(client_id: str, body: dict) -> Profile | None:
     result = (
-        get_admin_client()
+        get_admin_db_client()
         .table("profiles")
         .update(body)
         .eq("id", client_id)
@@ -64,7 +64,7 @@ def update_client(client_id: str, body: dict) -> Profile | None:
 
 
 def deactivate_client(client_id: str) -> None:
-    get_admin_client().table("profiles").update({"is_active": False}).eq("id", client_id).execute()
+    get_admin_db_client().table("profiles").update({"is_active": False}).eq("id", client_id).execute()
 
 
 def get_client_history(client_id: str) -> dict:

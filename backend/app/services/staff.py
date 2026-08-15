@@ -1,7 +1,7 @@
 from typing import Optional
 
 from app.core.context import get_db
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.staff import StaffProfile, StaffDetail, StaffLeave
 
 
@@ -30,7 +30,7 @@ def get_staff(staff_id: str) -> StaffDetail | None:
 
 
 def create_staff(body: dict) -> StaffProfile:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     email = body["email"]
     password = body["password"]
     full_name = body["full_name"]

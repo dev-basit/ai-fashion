@@ -1,5 +1,5 @@
 from app.core.context import get_db, get_current_user
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.profiles import Profile
 
 

@@ -1,13 +1,13 @@
 from datetime import datetime, timezone
 
 from app.core.context import get_db, get_current_user
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.chat import Message
 
 
 def list_conversations() -> list:
     user = get_current_user()
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     memberships = admin.table("conversation_participants").select("conversation_id").eq("profile_id", user.id).execute().data or []
     conv_ids = [m["conversation_id"] for m in memberships]
     if not conv_ids:
@@ -24,7 +24,7 @@ def list_conversations() -> list:
 
 def create_conversation(recipient_id: str) -> dict:
     user = get_current_user()
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     my_participations = admin.table("conversation_participants").select("conversation_id").eq("profile_id", user.id).execute().data or []
     my_conv_ids = [p["conversation_id"] for p in my_participations]
 
@@ -46,7 +46,7 @@ def create_conversation(recipient_id: str) -> dict:
 def is_member(conversation_id: str) -> bool:
     user = get_current_user()
     data = (
-        get_admin_client()
+        get_admin_db_client()
         .table("conversation_participants")
         .select("conversation_id")
         .eq("conversation_id", conversation_id)
@@ -97,7 +97,7 @@ def list_recipients() -> list:
         result = db.table("profiles").select("id, full_name, avatar_url, role").eq("is_active", True).neq("id", user.id).order("full_name").execute()
         return result.data or []
 
-    admin = get_admin_client()
+    admin = get_admin_db_client()
 
     if role == "customer":
         apts = admin.table("appointments").select("staff_profile_id, staff_profiles(profile_id)").eq("client_id", user.id).execute().data or []

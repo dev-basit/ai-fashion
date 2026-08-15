@@ -1,19 +1,19 @@
 from app.core.context import get_db, get_current_user
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.config.settings import settings
 from app.schemas.ai import AiConversation, AiMessage
 
 
 def check_rate_limit(user_id: str, today: str) -> tuple[int, bool]:
     """Returns (call_count, is_limited)."""
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     row = admin.table("ai_usage").select("call_count").eq("user_id", user_id).eq("date", today).maybe_single().execute().data
     count = row["call_count"] if row else 0
     return count, count >= settings.ai_daily_limit
 
 
 def increment_usage(user_id: str, today: str, current_count: int) -> None:
-    get_admin_client().table("ai_usage").upsert(
+    get_admin_db_client().table("ai_usage").upsert(
         {"user_id": user_id, "date": today, "call_count": current_count + 1},
         on_conflict="user_id,date",
     ).execute()
@@ -62,7 +62,7 @@ def delete_conversation(conversation_id: str) -> int:
 
 
 def load_history(conversation_id: str) -> list[dict]:
-    admin = get_admin_client()
+    admin = get_admin_db_client()
     result = (
         admin.table("ai_messages")
         .select("role, content")
@@ -74,19 +74,19 @@ def load_history(conversation_id: str) -> list[dict]:
 
 
 def save_message(conversation_id: str, role: str, content: str) -> None:
-    get_admin_client().table("ai_messages").insert(
+    get_admin_db_client().table("ai_messages").insert(
         {"ai_conversation_id": conversation_id, "role": role, "content": content}
     ).execute()
 
 
 def auto_title_conversation(conversation_id: str, first_message: str) -> None:
     title = first_message[:50].strip()
-    get_admin_client().table("ai_conversations").update({"title": title}).eq("id", conversation_id).execute()
+    get_admin_db_client().table("ai_conversations").update({"title": title}).eq("id", conversation_id).execute()
 
 
 def verify_conversation_owner(conversation_id: str, user_id: str) -> bool:
     data = (
-        get_admin_client()
+        get_admin_db_client()
         .table("ai_conversations")
         .select("id")
         .eq("id", conversation_id)
@@ -110,7 +110,7 @@ def get_messages(conversation_id: str) -> list:
 
 
 def match_documents(embedding: list[float], user_role: str, limit: int = 5) -> list[dict]:
-    result = get_admin_client().rpc("match_documents", {
+    result = get_admin_db_client().rpc("match_documents", {
         "query_embedding": embedding,
         "match_threshold": 0.5,
         "match_count": limit,

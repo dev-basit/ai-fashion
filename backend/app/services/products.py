@@ -1,7 +1,7 @@
 from typing import Optional
 
 from app.core.context import get_db
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 from app.schemas.products import Product, ProductCategory
 
 
@@ -73,7 +73,7 @@ def create_product_category(body: dict) -> ProductCategory:
 
 def get_low_stock_products() -> list:
     result = (
-        get_admin_client()
+        get_admin_db_client()
         .table("products")
         .select("*, product_categories(*)")
         .eq("is_active", True)
