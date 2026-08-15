@@ -1,7 +1,5 @@
 from typing import Optional
-
 from fastapi import APIRouter, HTTPException, Query
-
 from app.services import products as products_svc
 
 router = APIRouter(tags=["products"])

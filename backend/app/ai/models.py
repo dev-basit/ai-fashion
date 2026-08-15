@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-
 from app.config.settings import settings
 
 llm = ChatOpenAI(

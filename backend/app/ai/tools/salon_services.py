@@ -1,16 +1,11 @@
 import json
 from typing import Annotated, Optional
-
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
+from langchain_core.tools import tool
 from app.services import salon_services as svc
 
 
 @tool
-def list_services(
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
-) -> str:
+def list_services() -> str:
     """List all active services with their categories, pricing, duration, and variants. Use this to find valid service IDs for booking."""
     data = svc.list_services()
     if not data:
@@ -28,7 +23,6 @@ def create_service(
     duration_minutes: Annotated[int, "Service duration in minutes"],
     description: Annotated[Optional[str], "Service description"] = None,
     category_id: Annotated[Optional[str], "UUID of the service category"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a new service. Admin only."""
     try:
@@ -46,7 +40,6 @@ def update_service(
     base_price: Annotated[Optional[float], "New base price"] = None,
     duration_minutes: Annotated[Optional[int], "New duration in minutes"] = None,
     is_active: Annotated[Optional[bool], "Set false to deactivate"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update an existing service. Admin only."""
     try:

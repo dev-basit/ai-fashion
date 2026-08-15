@@ -1,5 +1,4 @@
 from typing import Any, Optional, cast
-
 from app.core.supabase import get_admin_db_client
 
 

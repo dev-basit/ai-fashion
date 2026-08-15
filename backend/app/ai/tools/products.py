@@ -1,8 +1,6 @@
 import json
 from typing import Annotated, Optional
-
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
+from langchain_core.tools import tool
 
 from app.config.settings import settings
 from app.services import products as products_svc
@@ -12,7 +10,6 @@ from app.services import products as products_svc
 def list_products(
     search: Annotated[Optional[str], "Search products by name"] = None,
     category_id: Annotated[Optional[str], "Filter by product category UUID"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List available products. Optionally search by name or filter by category."""
     data = products_svc.list_products(search=search, category_id=category_id)
@@ -31,7 +28,6 @@ def create_product(
     stock_quantity: Annotated[int, "Initial stock quantity"],
     description: Annotated[Optional[str], "Product description"] = None,
     category_id: Annotated[Optional[str], "UUID of the product category"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a new product. Admin only."""
     try:
@@ -49,7 +45,6 @@ def update_product(
     price: Annotated[Optional[float], "New price"] = None,
     stock_quantity: Annotated[Optional[int], "New stock quantity"] = None,
     is_active: Annotated[Optional[bool], "Set false to deactivate"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update an existing product. Admin only."""
     try:
@@ -63,7 +58,6 @@ def update_product(
 @tool
 def delete_product(
     product_id: Annotated[str, "UUID of the product to delete"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Permanently delete a product. Admin only. Ask for confirmation before proceeding."""
     try:

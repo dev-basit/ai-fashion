@@ -1,10 +1,7 @@
 import json
 from typing import Annotated, Optional
+from langchain_core.tools import tool
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
-from app.ai.tools.utils import get_user_id
 from app.config.settings import settings
 from app.services import appointments as appts_svc
 
@@ -30,7 +27,6 @@ def book_appointment(
     starts_at: Annotated[str, "Start datetime in ISO 8601 format"],
     staff_profile_id: Annotated[Optional[str], "Preferred staff profile UUID"] = None,
     notes: Annotated[Optional[str], "Special notes or requests"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Book a new appointment for the current customer."""
     try:
@@ -49,7 +45,6 @@ def book_appointment_for_client(
     starts_at: Annotated[str, "Start datetime in ISO 8601 format"],
     staff_profile_id: Annotated[Optional[str], "Staff profile UUID"] = None,
     notes: Annotated[Optional[str], "Special notes or requests"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Book an appointment on behalf of a client. Requires client_id, service_id, and starts_at."""
     try:
@@ -65,7 +60,6 @@ def book_appointment_for_client(
 def cancel_appointment(
     appointment_id: Annotated[str, "UUID of the appointment to cancel"],
     reason: Annotated[Optional[str], "Reason for cancellation"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Cancel an appointment by ID. Confirm the appointment ID first."""
     try:
@@ -82,7 +76,6 @@ def get_all_appointments(
     status: Annotated[Optional[str], "Filter by status"] = None,
     date_from: Annotated[Optional[str], "Filter from date (ISO 8601)"] = None,
     date_to: Annotated[Optional[str], "Filter to date (ISO 8601)"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all appointments across all clients. Supports filtering by client, staff, status, or date range."""
     data = appts_svc.list_appointments(client_id=client_id, staff_profile_id=staff_profile_id, status=status, from_=date_from, to=date_to)
@@ -98,7 +91,6 @@ def get_all_appointments(
 def update_appointment_status(
     appointment_id: Annotated[str, "UUID of the appointment"],
     status: Annotated[str, "New status: pending | confirmed | in_progress | completed | cancelled | no_show"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update the status of any appointment."""
     try:
@@ -111,7 +103,6 @@ def update_appointment_status(
 @tool
 def delete_appointment(
     appointment_id: Annotated[str, "UUID of the appointment to delete"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Permanently delete an appointment. Admin only. Ask for confirmation before proceeding."""
     try:

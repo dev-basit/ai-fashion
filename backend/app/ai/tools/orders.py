@@ -1,10 +1,7 @@
 import json
 from typing import Annotated, Optional
+from langchain_core.tools import tool
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
-from app.ai.tools.utils import get_user_id
 from app.config.settings import settings
 from app.services import orders as orders_svc
 
@@ -22,7 +19,6 @@ def _format_order(o: dict) -> dict:
 @tool
 def get_my_orders(
     limit: Annotated[int, "Max orders to return"] = settings.page_limit,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List the current customer's own orders with item details and status."""
     data = orders_svc.list_orders()
@@ -34,7 +30,6 @@ def get_my_orders(
 @tool
 def get_order_status(
     order_id: Annotated[str, "UUID of the order"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Get the full details and status of a specific order by its ID."""
     data = orders_svc.get_order(order_id)
@@ -46,7 +41,6 @@ def get_order_status(
 @tool
 def get_all_orders(
     client_id: Annotated[Optional[str], "Filter by client profile UUID"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all orders across all clients. Optionally filter by a specific client."""
     data = orders_svc.list_orders(client_id=client_id)
@@ -62,7 +56,6 @@ def get_all_orders(
 def update_order_status(
     order_id: Annotated[str, "UUID of the order"],
     status: Annotated[str, "New status: pending | processing | shipped | delivered | cancelled | refunded"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update the status of an order. Admin only."""
     try:

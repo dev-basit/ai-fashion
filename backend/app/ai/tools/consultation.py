@@ -1,17 +1,12 @@
 import json
 from typing import Annotated, Optional
+from langchain_core.tools import tool
 
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
-from app.ai.tools.utils import get_user_id
 from app.services import consultation as consultation_svc
 
 
 @tool
-def get_my_consultation_records(
-    config: Annotated[RunnableConfig, InjectedToolArg],
-) -> str:
+def get_my_consultation_records() -> str:
     """Get the current customer's own consultation records."""
     from app.core.context import get_current_user
 
@@ -28,7 +23,6 @@ def get_my_consultation_records(
 @tool
 def get_consultation_records(
     client_id: Annotated[Optional[str], "Filter by client profile UUID"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List consultation records. Optionally filter by a specific client."""
     data = consultation_svc.list_records(client_id=client_id)
@@ -45,7 +39,6 @@ def create_consultation_record(
     template_id: Annotated[Optional[str], "UUID of the consultation form template"] = None,
     notes: Annotated[Optional[str], "Session notes and observations"] = None,
     recommendations: Annotated[Optional[str], "Recommended treatments or products"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a consultation record for a client. Staff and admin only."""
     try:

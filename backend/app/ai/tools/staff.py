@@ -1,16 +1,11 @@
 import json
 from typing import Annotated, Optional
-
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
+from langchain_core.tools import tool
 from app.services import staff as staff_svc
 
 
 @tool
-def list_staff(
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
-) -> str:
+def list_staff() -> str:
     """List all staff members with their profile IDs and specializations. Use this to find a staff profile ID when booking an appointment."""
     data = staff_svc.list_staff()
     if not data:
@@ -27,7 +22,6 @@ def create_staff(
     full_name: Annotated[str, "Staff member's full name"],
     password: Annotated[str, "Initial password"],
     phone: Annotated[Optional[str], "Staff member's phone number"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a new staff account. Admin only."""
     try:
@@ -44,7 +38,6 @@ def update_staff(
     phone: Annotated[Optional[str], "New phone number"] = None,
     specializations: Annotated[Optional[list[str]], "Updated list of specializations"] = None,
     is_active: Annotated[Optional[bool], "Set false to deactivate"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update a staff member's profile. Admin only."""
     try:

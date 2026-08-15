@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-
 from app.services import salon_services as svc
 
 router = APIRouter(tags=["services"])

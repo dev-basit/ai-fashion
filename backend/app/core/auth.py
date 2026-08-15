@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-
 from app.core.context import get_db, get_current_user
 
 
@@ -13,4 +12,5 @@ def require_admin():
 
 
 def get_admin_auth():
+    
     require_admin()

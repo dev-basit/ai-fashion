@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from app.services import notifications as notif_svc
 
 router = APIRouter(tags=["notifications"])

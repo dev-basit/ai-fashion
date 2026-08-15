@@ -1,17 +1,11 @@
 import json
 from typing import Annotated, Optional
-
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
-from app.ai.tools.utils import get_user_id
+from langchain_core.tools import tool
 from app.services import treatment_plans as tp_svc
 
 
 @tool
-def get_my_treatment_plans(
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
-) -> str:
+def get_my_treatment_plans() -> str:
     """Get the current customer's own assigned treatment plans."""
     data = tp_svc.list_plans()
     if not data:
@@ -25,7 +19,6 @@ def get_my_treatment_plans(
 @tool
 def get_treatment_plans(
     client_id: Annotated[Optional[str], "Filter by client profile UUID"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List treatment plans. Optionally filter by client."""
     data = tp_svc.list_plans(client_id=client_id)
@@ -43,7 +36,6 @@ def assign_treatment_plan(
     template_id: Annotated[Optional[str], "UUID of the treatment plan template"] = None,
     start_date: Annotated[Optional[str], "Plan start date (YYYY-MM-DD)"] = None,
     notes: Annotated[Optional[str], "Additional notes for the plan"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Assign a treatment plan to a client. Staff and admin only."""
     try:
@@ -55,9 +47,7 @@ def assign_treatment_plan(
 
 
 @tool
-def list_treatment_plan_templates(
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
-) -> str:
+def list_treatment_plan_templates() -> str:
     """List all available treatment plan templates."""
     data = tp_svc.list_templates()
     if not data:
@@ -73,7 +63,6 @@ def create_treatment_plan_template(
     name: Annotated[str, "Template name"],
     description: Annotated[Optional[str], "Template description"] = None,
     duration_days: Annotated[Optional[int], "Duration of the plan in days"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a new treatment plan template. Admin only."""
     try:

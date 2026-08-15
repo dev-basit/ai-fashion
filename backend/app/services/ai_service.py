@@ -56,6 +56,7 @@ def create_conversation() -> AiConversation:
         .single()
         .execute()
     )
+    
     return AiConversation.model_validate(result.data)
 
 

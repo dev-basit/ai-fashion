@@ -1,7 +1,5 @@
 from typing import Optional
-
 from fastapi import APIRouter, Query
-
 from app.services import settings as settings_svc
 
 router = APIRouter(tags=["settings"])

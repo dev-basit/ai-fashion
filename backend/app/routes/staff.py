@@ -1,7 +1,5 @@
 from typing import Optional
-
 from fastapi import APIRouter, Body, HTTPException, Query
-
 from app.services import staff as staff_svc
 
 router = APIRouter(tags=["staff"])

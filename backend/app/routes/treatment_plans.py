@@ -1,7 +1,5 @@
 from typing import Any, Optional, cast
-
 from fastapi import APIRouter, HTTPException, Query
-
 from app.core.context import get_current_user, get_db
 from app.services import treatment_plans as tp_svc
 

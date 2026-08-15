@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from app.services import profiles as profiles_svc
 
 router = APIRouter(tags=["me"])

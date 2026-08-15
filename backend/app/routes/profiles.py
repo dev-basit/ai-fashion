@@ -1,7 +1,5 @@
 from typing import Any, cast
-
 from fastapi import APIRouter, Depends, HTTPException
-
 from app.core.auth import get_admin_auth
 from app.core.context import get_current_user, get_db
 from app.services import profiles as profiles_svc
