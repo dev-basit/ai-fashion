@@ -13,7 +13,7 @@ import { useAIStore } from "@/store/ai.store";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { env } from "@/config/env";
+import { env } from "@/config/config";
 
 export function AssistantChat() {
   const { user } = useAuth();

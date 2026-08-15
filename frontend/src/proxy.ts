@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { env } from "./config/env";
+import { env } from "./config/config";
 
 const PUBLIC_ROUTES = ["/login", "/forgot-password"];
 const DASHBOARD_ROUTES = ["/dashboard"];

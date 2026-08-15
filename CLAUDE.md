@@ -123,7 +123,7 @@ frontend/src/
                          #   date-picker (DatePicker + DateTimePicker), calendar, popover, etc.
   config/
     constants.ts         # APP_NAME, ROUTES, ROLES, API_ROUTES, status labels/colors
-    env.ts               # Typed env access — always import from here, never process.env directly
+    config.ts            # Typed env access — always import from here, never process.env directly
     ai.ts                # SUGGESTED_QUESTIONS for the AI assistant UI
     query.ts             # TanStack Query: queryClient defaults + QK key factory
   hooks/                 # TanStack Query hooks — one file per domain
@@ -465,7 +465,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY    # Supabase publishable/anon key
 NEXT_PUBLIC_BACKEND_URL                 # Backend API URL (default: http://localhost:8000)
 ```
 
-All frontend env accessed via `src/config/env.ts`. **Never access `process.env` directly** in the frontend.
+All frontend env accessed via `src/config/config.ts`. **Never access `process.env` directly** in the frontend.
 
 ### Backend (`backend/.env`)
 
