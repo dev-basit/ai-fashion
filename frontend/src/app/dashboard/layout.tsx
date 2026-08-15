@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { DashboardLoader } from "@/components/common/LoadingSpinner";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import type { UserRole } from "@/types/database";
@@ -9,7 +9,7 @@ import type { UserRole } from "@/types/database";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { profile, isLoading } = useAuth();
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <DashboardLoader />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
