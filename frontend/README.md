@@ -85,6 +85,18 @@ src/
 - **Date pickers**: Never use `<input type="date">`. Use `DatePicker` / `DateTimePicker` from `@/components/ui/date-picker`.
 - **Form pattern**: `useForm()` + `zodResolver` + `watch()` + `setValue()`, not `register()` for date pickers.
 
+## Shared Constants, Types & Utilities
+
+**Single source of truth** — no inline definitions in components:
+
+| Category           | Location                    | Examples                                                                                                                       |
+| ------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Types**          | `src/types/database.ts`     | `ClientSegment`, `DatePreset`                                                                                                  |
+| **Config**         | `src/config/constants.ts`   | `CLIENT_SEGMENTS`, `CONSULTATION_FIELD_TYPES`, `TREATMENT_PLAN_DURATIONS`, `DEFAULT_STAFF_SCHEDULE_ROWS`, `DATE_PRESET_LABELS` |
+| **Date Utilities** | `src/utils/date.ts`         | `toLocalInput()`, `computeDateRange()`                                                                                         |
+| **Consultation**   | `src/utils/consultation.ts` | `newConsultationField()`                                                                                                       |
+| **Roles**          | `src/utils/role.ts`         | `getRoleBadgeColor()`, `isAdmin()`, `isStaff()`                                                                                |
+
 ## Data Fetching Pattern
 
 All components fetch data through TanStack Query hooks defined in `src/hooks/`:
@@ -92,19 +104,26 @@ All components fetch data through TanStack Query hooks defined in `src/hooks/`:
 ```tsx
 "use client";
 import { useAIConversations, useAIMessages } from "@/hooks/useAI";
+import { CONSULTATION_FIELD_TYPES } from "@/config/constants";
+import { toLocalInput, computeDateRange } from "@/utils/date";
 
 export function MyComponent() {
   // Automatic caching + refetching
   const { data: conversations = [], isLoading } = useAIConversations();
   const { data: messages = [] } = useAIMessages(activeConvId);
-  
+
+  // Use centralized utilities & constants
+  const dateStr = toLocalInput("2025-01-15T10:30:00Z");
+  const dateRange = computeDateRange("today");
+
   if (isLoading) return <LoadingSpinner />;
-  
+
   return <div>{/* render conversations + messages */}</div>;
 }
 ```
 
 **Never do this:**
+
 ```tsx
 // ❌ WRONG: useEffect + service call
 useEffect(() => {
@@ -114,18 +133,23 @@ useEffect(() => {
   };
   load();
 }, []);
+
+// ❌ WRONG: inline type or const
+type MySegment = "all" | "new" | "recurring"; // Move to database.ts
+const MY_OPTIONS = [{...}]; // Move to constants.ts
+function myUtility() {} // Move to utils/
 ```
 
 ### Available Hooks by Domain
 
-| Domain | Hooks |
-|--------|-------|
-| **AI** | `useAIConversations()`, `useAIMessages(convId)`, `useCreateAIConversation()`, `useDeleteAIConversation()` |
-| **Chat** | `useConversations()`, `useMessages(convId)`, `useCreateConversation()` |
-| **Appointments** | `useAppointments()`, `useAppointment(id)`, `useCreateAppointment()`, `useUpdateAppointmentStatus()` |
-| **Clients** | `useClients(search)`, `useClient(id)`, `useCreateClient()`, `useUpdateClient()` |
-| **Products** | `useProducts(filters)`, `useProduct(id)`, `useCreateProduct()`, `useUpdateProduct()` |
-| **Staff** | `useStaff()`, `useStaffMember(id)`, `useStaffByProfile(userId)`, `useStaffSchedule(id)` |
-| **Services** | `useServices(catId)`, `useService(id)`, `useServiceCategories()`, `useCreateService()` |
+| Domain           | Hooks                                                                                                     |
+| ---------------- | --------------------------------------------------------------------------------------------------------- |
+| **AI**           | `useAIConversations()`, `useAIMessages(convId)`, `useCreateAIConversation()`, `useDeleteAIConversation()` |
+| **Chat**         | `useConversations()`, `useMessages(convId)`, `useCreateConversation()`                                    |
+| **Appointments** | `useAppointments()`, `useAppointment(id)`, `useCreateAppointment()`, `useUpdateAppointmentStatus()`       |
+| **Clients**      | `useClients(search)`, `useClient(id)`, `useCreateClient()`, `useUpdateClient()`                           |
+| **Products**     | `useProducts(filters)`, `useProduct(id)`, `useCreateProduct()`, `useUpdateProduct()`                      |
+| **Staff**        | `useStaff()`, `useStaffMember(id)`, `useStaffByProfile(userId)`, `useStaffSchedule(id)`                   |
+| **Services**     | `useServices(catId)`, `useService(id)`, `useServiceCategories()`, `useCreateService()`                    |
 
 For complete architectural details, see `../CLAUDE.md`.

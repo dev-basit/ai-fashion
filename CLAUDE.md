@@ -214,9 +214,9 @@ backend/
 
 ### Supabase Clients (Frontend)
 
-| Client               | Import                       | Use in                                                   |
-| -------------------- | ---------------------------- | -------------------------------------------------------- |
-| `getBrowserClient()` | `@/services/supabase`        | Client components only — Realtime, `http.ts` auth header |
+| Client               | Import                       | Use in                                                     |
+| -------------------- | ---------------------------- | ---------------------------------------------------------- |
+| `getBrowserClient()` | `@/services/supabase`        | Client components only — Realtime, `http.ts` auth header   |
 | `getServerClient()`  | `@/services/supabase-server` | Auth callback route handler only (`app/api/auth/callback`) |
 
 **Never import Supabase directly into dashboard pages or regular components.** Use `useAuth()` hook from `@/hooks/useAuth` for auth state, and TanStack Query hooks for data fetching.
@@ -368,9 +368,9 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 
 export default function MyPage() {
   const { user, profile, isLoading } = useAuth();
-  
+
   if (isLoading) return <LoadingSpinner />;
-  
+
   return <MyComponent userId={user!.id} role={profile?.role ?? "customer"} />;
 }
 ```
@@ -655,12 +655,29 @@ def get_my_appointments(
 
 ---
 
+## Shared Constants, Types & Utilities
+
+**Single source of truth** — eliminate duplication, make refactoring safe:
+
+| Category               | Location                    | Examples                                                                                                                       |
+| ---------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Types**              | `src/types/database.ts`     | `UserRole`, `AppointmentStatus`, `ClientSegment`, `DatePreset`                                                                 |
+| **Config Constants**   | `src/config/constants.ts`   | `CLIENT_SEGMENTS`, `CONSULTATION_FIELD_TYPES`, `TREATMENT_PLAN_DURATIONS`, `DEFAULT_STAFF_SCHEDULE_ROWS`, `DATE_PRESET_LABELS` |
+| **Date Utils**         | `src/utils/date.ts`         | `toLocalInput()`, `computeDateRange()`, `formatDate()`, `formatTime()`                                                         |
+| **Consultation Utils** | `src/utils/consultation.ts` | `newConsultationField()` — factory for blank consultation fields                                                               |
+| **Role Utils**         | `src/utils/role.ts`         | `getRoleBadgeColor()`, `isAdmin()`, `isStaff()`, `isCustomer()`                                                                |
+
+**Rule**: Never define inline in a component. If you see a type or const that's used in multiple files, move it to one of the locations above.
+
+---
+
 ## Common Gotchas
 
 - **All dashboard pages are `"use client"` components**: Use `useAuth()` hook to access `user` and `profile`. Do NOT use server-side `getCurrentUserDetails()` (deleted). Pages should always show `<LoadingSpinner />` while `isLoading` is true.
 - **No useEffect + service calls**: All service calls moved to TanStack Query hooks. No pattern like `useEffect(() => { const load = async () => { await service.fetch() }` allowed. If data is needed, create a hook (e.g., `useAIConversations`).
 - **No direct `http` imports in components**: All data fetching through `src/hooks/` (TanStack Query). Streaming SSE (`fetch()` to `/ai/chat`) is intentional exception in `AssistantChat.tsx`.
 - **No direct Supabase queries in components**: `useAuth()` is for auth state (reads from Zustand store). Use TanStack Query hooks (like `useProduct()`, `useClient()`, `useStaffMember()`, `useAIConversations()`) for entity data fetching via backend API.
+- **No inline types/constants/utilities in components**: All shared definitions live in centralized locations — see "Shared Constants, Types & Utilities" section above.
 - **Services are thin HTTP clients**: `*.service.ts` call FastAPI via `http.ts`. They do not touch Supabase.
 - **Backend uses sync `def` for Supabase routes**: FastAPI runs sync handlers in a thread pool — no blocking.
 - **`get_admin_client()` only for bypass**: use in backend services only when explicitly skipping RLS.
