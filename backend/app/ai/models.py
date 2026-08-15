@@ -1,13 +1,13 @@
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from app.config.settings import settings
+from app.config.config import config
 
 llm = ChatOpenAI(
-    model=settings.openai_chat_model,
-    api_key=settings.openai_api_key,
+    model=config.openai_chat_model,
+    api_key=config.openai_api_key,
     streaming=True,
 )
 
 embeddings = OpenAIEmbeddings(
-    model=settings.openai_embedding_model,
-    api_key=settings.openai_api_key,
+    model=config.openai_embedding_model,
+    api_key=config.openai_api_key,
 )

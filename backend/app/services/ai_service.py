@@ -2,7 +2,7 @@ from typing import Any, cast
 
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_db_client
-from app.config.settings import settings
+from app.config.config import config
 from app.schemas.ai import AiConversation, AiMessage
 
 
@@ -12,7 +12,7 @@ def check_rate_limit(user_id: str, today: str) -> tuple[int, bool]:
     result = admin.table("ai_usage").select("call_count").eq("user_id", user_id).eq("date", today).maybe_single().execute()
     row: dict[str, Any] | None = cast(dict[str, Any], result.data) if result is not None and result.data is not None else None
     count: int = int(row["call_count"]) if row else 0
-    return count, count >= settings.ai_daily_limit
+    return count, count >= config.ai_daily_limit
 
 
 def increment_usage(user_id: str, today: str, current_count: int) -> None:

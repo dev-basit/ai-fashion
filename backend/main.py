@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config.settings import settings
+from app.config.config import config
 from app.core.context import _db_var, _user_var, _token_var
 from app.core.supabase import get_admin_client, get_user_client
 from app.routes import health
@@ -48,7 +48,7 @@ async def auth_middleware(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url],
+    allow_origins=[config.frontend_url],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,

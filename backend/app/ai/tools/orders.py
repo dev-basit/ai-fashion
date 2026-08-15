@@ -2,7 +2,7 @@ import json
 from typing import Annotated, Optional
 from langchain_core.tools import tool
 
-from app.config.settings import settings
+from app.config.config import config
 from app.services import orders as orders_svc
 
 
@@ -18,7 +18,7 @@ def _format_order(o: dict) -> dict:
 
 @tool
 def get_my_orders(
-    limit: Annotated[int, "Max orders to return"] = settings.page_limit,
+    limit: Annotated[int, "Max orders to return"] = config.page_limit,
 ) -> str:
     """List the current customer's own orders with item details and status."""
     data = orders_svc.list_orders()

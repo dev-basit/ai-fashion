@@ -1,8 +1,6 @@
 import json
 from typing import Annotated, Optional
 from langchain_core.tools import tool
-
-from app.config.settings import settings
 from app.services import products as products_svc
 
 

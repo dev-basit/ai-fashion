@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
-from app.config.settings import settings
+from app.config.config import config
 from app.core.context import get_current_user, get_db, get_token
 from app.services import ai_service
 
@@ -59,8 +59,8 @@ async def ai_chat(body: dict):
     if is_limited:
         raise HTTPException(
             status_code=429,
-            detail={"error": "rate_limit", "message": f"You've reached your daily limit of {settings.ai_daily_limit} AI calls. Resets at midnight.", "limit": settings.ai_daily_limit, "remaining": 0},
-            headers={"X-RateLimit-Limit": str(settings.ai_daily_limit), "X-RateLimit-Remaining": "0"},
+            detail={"error": "rate_limit", "message": f"You've reached your daily limit of {config.ai_daily_limit} AI calls. Resets at midnight.", "limit": config.ai_daily_limit, "remaining": 0},
+            headers={"X-RateLimit-Limit": str(config.ai_daily_limit), "X-RateLimit-Remaining": "0"},
         )
 
     if not ai_service.verify_conversation_owner(conversation_id, user.id):
@@ -79,7 +79,7 @@ async def ai_chat(body: dict):
         HumanMessage(content=message),
     ]
 
-    remaining = settings.ai_daily_limit - (call_count + 1)
+    remaining = config.ai_daily_limit - (call_count + 1)
 
     async def generate():
         from app.ai.graph import graph
@@ -107,5 +107,5 @@ async def ai_chat(body: dict):
     return StreamingResponse(
         generate(),
         media_type="text/plain; charset=utf-8",
-        headers={"X-RateLimit-Limit": str(settings.ai_daily_limit), "X-RateLimit-Remaining": str(remaining)},
+        headers={"X-RateLimit-Limit": str(config.ai_daily_limit), "X-RateLimit-Remaining": str(remaining)},
     )

@@ -2,7 +2,7 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class Config(BaseSettings):
     # Application
     frontend_url: str = "http://localhost:3000"
 
@@ -25,4 +25,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
-settings = Settings()  # type: ignore[call-arg]
+config = Config()  # type: ignore[call-arg]

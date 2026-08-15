@@ -2,14 +2,14 @@ import json
 from typing import Annotated, Optional
 from langchain_core.tools import tool
 
-from app.config.settings import settings
+from app.config.config import config
 from app.services import appointments as appts_svc
 
 
 @tool
 def get_my_appointments(
     status: Annotated[Optional[str], "Filter by status: pending | confirmed | in_progress | completed | cancelled | no_show"] = None,
-    limit: Annotated[int, "Max results to return"] = settings.page_limit,
+    limit: Annotated[int, "Max results to return"] = config.page_limit,
 ) -> str:
     """List the current user's own appointments. Optionally filter by status."""
     data = appts_svc.list_appointments(status=status)
