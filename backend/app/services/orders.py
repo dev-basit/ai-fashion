@@ -44,10 +44,9 @@ def create_order(body: dict) -> dict:
         db.table("orders")
         .insert({"client_id": body["client_id"], "total_amount": total, "notes": body.get("notes")})
         .select()
-        .maybe_single()
         .execute()
     )
-    order = order_result.data
+    order = order_result.data[0]
 
     db.table("order_items").insert([
         {"order_id": order["id"], "product_id": i["product_id"], "quantity": i["quantity"], "unit_price": i["unit_price"]}

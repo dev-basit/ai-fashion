@@ -19,9 +19,8 @@ def update_setting(key: str, value) -> BusinessSetting | None:
         .update({"value": value, "updated_by": user.id, "updated_at": datetime.now(timezone.utc).isoformat()})
         .eq("key", key)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return BusinessSetting.model_validate(result.data)
+    return BusinessSetting.model_validate(result.data[0])

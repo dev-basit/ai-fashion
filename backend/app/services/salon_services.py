@@ -83,12 +83,11 @@ def update_category(category_id: str, body: dict) -> ServiceCategory | None:
         .update(body)
         .eq("id", category_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return ServiceCategory.model_validate(result.data)
+    return ServiceCategory.model_validate(result.data[0])
 
 
 def delete_category(category_id: str) -> None:
@@ -111,10 +110,9 @@ def create_variant(service_id: str, body: dict) -> ServiceVariant:
         get_db().table("service_variants")
         .insert({**body, "service_id": service_id})
         .select()
-        .maybe_single()
         .execute()
     )
-    return ServiceVariant.model_validate(result.data)
+    return ServiceVariant.model_validate(result.data[0])
 
 
 def update_variant(variant_id: str, body: dict) -> ServiceVariant | None:
@@ -123,12 +121,11 @@ def update_variant(variant_id: str, body: dict) -> ServiceVariant | None:
         .update(body)
         .eq("id", variant_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return ServiceVariant.model_validate(result.data)
+    return ServiceVariant.model_validate(result.data[0])
 
 
 def delete_variant(variant_id: str) -> None:

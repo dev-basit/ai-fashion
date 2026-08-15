@@ -82,10 +82,9 @@ def send_message(conversation_id: str, content: str) -> Message:
         get_db().table("messages")
         .insert({"conversation_id": conversation_id, "sender_id": user.id, "content": content, "message_type": "text"})
         .select("*, profiles!sender_id(id, full_name, avatar_url)")
-        .maybe_single()
         .execute()
     )
-    return Message.model_validate(result.data)
+    return Message.model_validate(result.data[0])
 
 
 def mark_conversation_read(conversation_id: str) -> None:

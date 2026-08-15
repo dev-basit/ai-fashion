@@ -106,14 +106,15 @@ def create_appointment(body: dict) -> dict:
 
 def update_appointment(appointment_id: str, body: dict) -> dict | None:
     result = (
-        get_db().table("appointments")
+        get_admin_db_client().table("appointments")
         .update(body)
         .eq("id", appointment_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    return result.data
+    if not result.data:
+        return None
+    return result.data[0]
 
 
 def delete_appointment(appointment_id: str) -> None:
@@ -170,10 +171,9 @@ def add_appointment_product(appointment_id: str, body: dict) -> dict:
         get_db().table("appointment_products")
         .insert({**body, "appointment_id": appointment_id})
         .select("*, products(name)")
-        .maybe_single()
         .execute()
     )
-    return result.data
+    return result.data[0]
 
 
 def remove_appointment_product(product_id: str) -> None:

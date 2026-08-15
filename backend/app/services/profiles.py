@@ -48,9 +48,8 @@ def update_profile(profile_id: str, body: dict) -> Profile | None:
         .update(body)
         .eq("id", profile_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return Profile.model_validate(result.data)
+    return Profile.model_validate(result.data[0])

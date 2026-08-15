@@ -52,12 +52,10 @@ def create_conversation() -> AiConversation:
     result = (
         get_db().table("ai_conversations")
         .insert({"user_id": user.id})
-        .select("id, title, created_at, updated_at")
-        .maybe_single()
+        .select("id, user_id, title, created_at, updated_at")
         .execute()
     )
-    
-    return AiConversation.model_validate(result.data)
+    return AiConversation.model_validate(result.data[0])
 
 
 def delete_conversation(conversation_id: str) -> int:

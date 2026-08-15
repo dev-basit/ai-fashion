@@ -44,8 +44,8 @@ def create_client(body: dict) -> Profile:
     result = admin.table("profiles").upsert(
         {"id": profile_id, "role": "customer", "full_name": full_name, "phone": phone,
          "date_of_birth": date_of_birth, "notes": notes, "is_active": True}
-    ).select().maybe_single().execute()
-    return Profile.model_validate(result.data)
+    ).select().execute()
+    return Profile.model_validate(result.data[0])
 
 
 def update_client(client_id: str, body: dict) -> Profile | None:
@@ -55,12 +55,11 @@ def update_client(client_id: str, body: dict) -> Profile | None:
         .update(body)
         .eq("id", client_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return Profile.model_validate(result.data)
+    return Profile.model_validate(result.data[0])
 
 
 def deactivate_client(client_id: str) -> None:
