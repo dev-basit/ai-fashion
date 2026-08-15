@@ -4,7 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # Application
-    app_url: str = "http://localhost:8000"
     frontend_url: str = "http://localhost:3000"
 
     # Supabase
