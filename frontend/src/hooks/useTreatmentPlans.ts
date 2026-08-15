@@ -68,8 +68,14 @@ export function useCreateTreatmentPlanTemplate() {
 export function useUpdateTreatmentPlanTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...payload }: { id: string } & Parameters<typeof treatmentPlansService.updateTemplate>[1]) => {
-      const { data, error } = await treatmentPlansService.updateTemplate(id, payload as Parameters<typeof treatmentPlansService.updateTemplate>[1]);
+    mutationFn: async ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof treatmentPlansService.updateTemplate>[1]) => {
+      const { data, error } = await treatmentPlansService.updateTemplate(
+        id,
+        payload as Parameters<typeof treatmentPlansService.updateTemplate>[1],
+      );
       if (error) throw new Error(error.message);
       return data as TreatmentPlanTemplate;
     },
@@ -97,8 +103,14 @@ export function useCreateClientTreatmentPlan() {
 export function useUpdateClientTreatmentPlan() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...payload }: { id: string } & Parameters<typeof treatmentPlansService.updateClientPlan>[1]) => {
-      const { data, error } = await treatmentPlansService.updateClientPlan(id, payload as Parameters<typeof treatmentPlansService.updateClientPlan>[1]);
+    mutationFn: async ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof treatmentPlansService.updateClientPlan>[1]) => {
+      const { data, error } = await treatmentPlansService.updateClientPlan(
+        id,
+        payload as Parameters<typeof treatmentPlansService.updateClientPlan>[1],
+      );
       if (error) throw new Error(error.message);
       return data as ClientTreatmentPlan;
     },

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useCreateTreatmentPlanTemplate, useUpdateTreatmentPlanTemplate } from "@/hooks/useTreatmentPlans";
+import { TREATMENT_PLAN_DURATIONS } from "@/config/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { TreatmentPlanTemplateBuilderProps } from "@/types/props";
 import type { TreatmentPlanStep } from "@/types/database";
 
-
-const DURATIONS = [30, 60, 90];
-
-export function TreatmentPlanTemplateBuilder({ template, onSuccess, onCancel }: TreatmentPlanTemplateBuilderProps) {
+export function TreatmentPlanTemplateBuilder({
+  template,
+  onSuccess,
+  onCancel,
+}: TreatmentPlanTemplateBuilderProps) {
   const isEdit = !!template;
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
@@ -59,14 +61,14 @@ export function TreatmentPlanTemplateBuilder({ template, onSuccess, onCancel }: 
         <Label>Duration</Label>
         <Select
           value={duration}
-          items={Object.fromEntries(DURATIONS.map((d) => [String(d), `${d}-day plan`]))}
+          items={Object.fromEntries(TREATMENT_PLAN_DURATIONS.map((d: number) => [String(d), `${d}-day plan`]))}
           onValueChange={(v: unknown) => setDuration(String(v ?? "30"))}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {DURATIONS.map((d) => (
+            {TREATMENT_PLAN_DURATIONS.map((d) => (
               <SelectItem key={d} value={String(d)}>
                 {d}-day plan
               </SelectItem>

@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { Calendar, Users, CheckCircle, Clock } from "lucide-react";
+import { PRESET_RANGE_LABEL } from "@/config/constants";
+import { computeDateRange } from "@/utils/date";
 import { StatsCard } from "./StatsCard";
-import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
-import type { DatePreset } from "./DateRangeFilter";
+import { DateRangeFilter } from "./DateRangeFilter";
+import type { DatePreset } from "@/types/database";
 import { useStaffByProfile } from "@/hooks/useStaff";
 import { useAppointments } from "@/hooks/useAppointments";
 import { formatTime, formatDate } from "@/utils/date";

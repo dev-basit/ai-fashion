@@ -12,7 +12,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { formatDate } from "@/utils/date";
 import type { StaffLeave } from "@/types/database";
 
-
 export function StaffLeaveCalendar({ staffProfileId, editable = true }: StaffLeaveCalendarProps) {
   const [showForm, setShowForm] = useState(false);
   const [start, setStart] = useState("");

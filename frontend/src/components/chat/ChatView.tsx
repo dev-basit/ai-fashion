@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { MessageSquare, Plus, Send, ChevronLeft, X } from "lucide-react";
 import { useConversations, useMessages } from "@/hooks/useChat";
 import { useChatStore } from "@/store/chat.store";
-import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";

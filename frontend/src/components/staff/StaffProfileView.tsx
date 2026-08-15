@@ -23,7 +23,6 @@ import { formatInitials, formatCurrency } from "@/utils/format";
 import { formatDate } from "@/utils/date";
 import type { StaffProfileViewProps } from "@/types/props";
 
-
 export function StaffProfileView({ staffProfile, isOwnProfile, role }: StaffProfileViewProps) {
   const router = useRouter();
   const profile = staffProfile.profiles;

@@ -43,7 +43,9 @@ export function useCreateService() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Service>) => {
-      const { data, error } = await servicesService.createService(payload as Parameters<typeof servicesService.createService>[0]);
+      const { data, error } = await servicesService.createService(
+        payload as Parameters<typeof servicesService.createService>[0],
+      );
       if (error) throw new Error(error.message);
       return data as Service;
     },
@@ -57,7 +59,10 @@ export function useUpdateService() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<Service>) => {
-      const { data, error } = await servicesService.updateService(id, payload as Parameters<typeof servicesService.updateService>[1]);
+      const { data, error } = await servicesService.updateService(
+        id,
+        payload as Parameters<typeof servicesService.updateService>[1],
+      );
       if (error) throw new Error(error.message);
       return data as Service;
     },
@@ -85,7 +90,9 @@ export function useCreateServiceCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<ServiceCategory>) => {
-      const { data, error } = await servicesService.createCategory(payload as Parameters<typeof servicesService.createCategory>[0]);
+      const { data, error } = await servicesService.createCategory(
+        payload as Parameters<typeof servicesService.createCategory>[0],
+      );
       if (error) throw new Error(error.message);
       return data as ServiceCategory;
     },
@@ -99,7 +106,10 @@ export function useUpdateServiceCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<ServiceCategory>) => {
-      const { data, error } = await servicesService.updateCategory(id, payload as Parameters<typeof servicesService.updateCategory>[1]);
+      const { data, error } = await servicesService.updateCategory(
+        id,
+        payload as Parameters<typeof servicesService.updateCategory>[1],
+      );
       if (error) throw new Error(error.message);
       return data as ServiceCategory;
     },
@@ -152,8 +162,15 @@ export function useCreateServiceVariant() {
 export function useUpdateServiceVariant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ variantId, serviceId, ...payload }: { variantId: string; serviceId: string } & Partial<ServiceVariant>) => {
-      const { data, error } = await servicesService.updateVariant(variantId, payload as Parameters<typeof servicesService.updateVariant>[1]);
+    mutationFn: async ({
+      variantId,
+      serviceId,
+      ...payload
+    }: { variantId: string; serviceId: string } & Partial<ServiceVariant>) => {
+      const { data, error } = await servicesService.updateVariant(
+        variantId,
+        payload as Parameters<typeof servicesService.updateVariant>[1],
+      );
       if (error) throw new Error(error.message);
       return data as ServiceVariant;
     },

@@ -122,7 +122,12 @@ export function useDeleteAppointment() {
 export function useAddAppointmentProduct() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { appointment_id: string; product_id: string; quantity: number; notes?: string }) => {
+    mutationFn: async (payload: {
+      appointment_id: string;
+      product_id: string;
+      quantity: number;
+      notes?: string;
+    }) => {
       const { data, error } = await appointmentsService.addProductUsed(payload);
       if (error) throw new Error(error.message);
       return data;

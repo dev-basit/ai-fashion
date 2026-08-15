@@ -4,22 +4,14 @@ import type { StaffScheduleGridProps, StaffScheduleRow } from "@/types/props";
 
 import { useState, useEffect } from "react";
 import { useStaffSchedule, useUpsertSchedule } from "@/hooks/useStaff";
+import { DAYS_OF_WEEK, DEFAULT_STAFF_SCHEDULE_ROWS } from "@/config/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { DAYS_OF_WEEK } from "@/config/constants";
 import type { StaffSchedule } from "@/types/database";
 
-
-const DEFAULT_ROWS: StaffScheduleRow[] = DAYS_OF_WEEK.map((_, i) => ({
-  day_of_week: i,
-  start_time: "09:00",
-  end_time: "17:00",
-  is_working: i !== 0,
-}));
-
 export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffScheduleGridProps) {
-  const [rows, setRows] = useState<StaffScheduleRow[]>(DEFAULT_ROWS);
+  const [rows, setRows] = useState<StaffScheduleRow[]>(DEFAULT_STAFF_SCHEDULE_ROWS);
   const [saved, setSaved] = useState(false);
 
   const { data: scheduleData } = useStaffSchedule(staffProfileId);
@@ -29,7 +21,7 @@ export function StaffScheduleGrid({ staffProfileId, editable = true }: StaffSche
     if (scheduleData && (scheduleData as StaffSchedule[]).length) {
       const byDay = new Map((scheduleData as StaffSchedule[]).map((s) => [s.day_of_week, s]));
       setRows(
-        DEFAULT_ROWS.map((d) => {
+        DEFAULT_STAFF_SCHEDULE_ROWS.map((d) => {
           const existing = byDay.get(d.day_of_week);
           return existing
             ? {

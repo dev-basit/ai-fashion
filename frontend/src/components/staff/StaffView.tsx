@@ -95,10 +95,7 @@ export function StaffView() {
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
           </DialogHeader>
-          <StaffForm
-            onSuccess={() => setShowForm(false)}
-            onCancel={() => setShowForm(false)}
-          />
+          <StaffForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
         </DialogContent>
       </Dialog>
     </div>

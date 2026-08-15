@@ -26,7 +26,7 @@ export function ConsultationForm({
   const [selectedClient, setSelectedClient] = useState(clientId ?? "");
 
   const { data: clientsRaw } = useClients();
-  const clients = (!clientId ? clientsRaw ?? [] : []) as Profile[];
+  const clients = (!clientId ? (clientsRaw ?? []) : []) as Profile[];
   const createRecord = useCreateConsultationRecord();
 
   const setResp = (fieldId: string, value: unknown) => setResponses((p) => ({ ...p, [fieldId]: value }));
@@ -116,18 +116,12 @@ export function ConsultationForm({
           )}
           {field.type === "checkbox" && (
             <div className="flex items-center gap-2">
-              <Checkbox
-                checked={Boolean(responses[field.id])}
-                onCheckedChange={(c) => setResp(field.id, !!c)}
-              />
+              <Checkbox checked={Boolean(responses[field.id])} onCheckedChange={(c) => setResp(field.id, !!c)} />
               <span className="text-sm text-muted-foreground">{field.placeholder ?? "Yes"}</span>
             </div>
           )}
           {field.type === "date" && (
-            <DatePicker
-              value={String(responses[field.id] ?? "")}
-              onChange={(v) => setResp(field.id, v)}
-            />
+            <DatePicker value={String(responses[field.id] ?? "")} onChange={(v) => setResp(field.id, v)} />
           )}
           {(field.type as string) === "number" && (
             <Input

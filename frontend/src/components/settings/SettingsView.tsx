@@ -18,7 +18,6 @@ import { StaffScheduleGrid } from "@/components/staff/StaffScheduleGrid";
 import type { SettingsViewProps } from "@/types/props";
 import type { UserRole } from "@/types/database";
 
-
 function UsersTab() {
   const { data: users = [], isLoading } = useAllProfiles();
   const updateProfile = useUpdateProfile();
@@ -100,7 +99,10 @@ function NotificationsTab() {
 
   const save = () => {
     updateSetting.mutate(
-      { key: "notification_settings", value: { email: emailEnabled, sms: smsEnabled, reminder_hours: Number(reminderHours) } },
+      {
+        key: "notification_settings",
+        value: { email: emailEnabled, sms: smsEnabled, reminder_hours: Number(reminderHours) },
+      },
       {
         onSuccess: () => {
           setSaved(true);

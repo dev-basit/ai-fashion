@@ -68,8 +68,14 @@ export function useCreateConsultationTemplate() {
 export function useUpdateConsultationTemplate() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...payload }: { id: string } & Parameters<typeof consultationService.updateTemplate>[1]) => {
-      const { data, error } = await consultationService.updateTemplate(id, payload as Parameters<typeof consultationService.updateTemplate>[1]);
+    mutationFn: async ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof consultationService.updateTemplate>[1]) => {
+      const { data, error } = await consultationService.updateTemplate(
+        id,
+        payload as Parameters<typeof consultationService.updateTemplate>[1],
+      );
       if (error) throw new Error(error.message);
       return data as ConsultationFormTemplate;
     },
@@ -97,8 +103,14 @@ export function useCreateConsultationRecord() {
 export function useUpdateConsultationRecord() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...payload }: { id: string } & Parameters<typeof consultationService.updateRecord>[1]) => {
-      const { data, error } = await consultationService.updateRecord(id, payload as Parameters<typeof consultationService.updateRecord>[1]);
+    mutationFn: async ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof consultationService.updateRecord>[1]) => {
+      const { data, error } = await consultationService.updateRecord(
+        id,
+        payload as Parameters<typeof consultationService.updateRecord>[1],
+      );
       if (error) throw new Error(error.message);
       return data as ConsultationRecord;
     },

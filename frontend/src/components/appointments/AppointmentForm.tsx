@@ -9,6 +9,7 @@ import { useStaff, useStaffByProfile } from "@/hooks/useStaff";
 import { useClients } from "@/hooks/useClients";
 import { useCreateAppointment, useUpdateAppointment } from "@/hooks/useAppointments";
 import { useAuthStore } from "@/store/auth.store";
+import { toLocalInput } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,14 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateTimePicker } from "@/components/ui/date-picker";
 import type { AppointmentFormProps } from "@/types/props";
 import type { Service, StaffProfile, Profile } from "@/types/database";
-
-
-/** ISO string → value for <input type="datetime-local"> in local time */
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const off = d.getTimezoneOffset();
-  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
-}
 
 export function AppointmentForm({ userRole, clientId, appointment, onSuccess, onCancel }: AppointmentFormProps) {
   const isEdit = !!appointment;
@@ -38,7 +31,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
   const staffList = userRole !== "staff" ? ((staffRaw ?? []) as StaffProfile[]) : [];
   const staffByProfile = useStaffByProfile(userRole === "staff" ? (userId ?? null) : null);
   const { data: clientsRaw } = useClients();
-  const clients = (!clientId && !isEdit ? clientsRaw ?? [] : []) as Profile[];
+  const clients = (!clientId && !isEdit ? (clientsRaw ?? []) : []) as Profile[];
   const createAppointment = useCreateAppointment();
   const updateAppointment = useUpdateAppointment();
 
@@ -47,7 +40,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
     handleSubmit,
     setValue,
     watch,
-    formState: { errors }
+    formState: { errors },
   } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -55,8 +48,8 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
       service_id: appointment?.service_id ?? "",
       staff_profile_id: appointment?.staff_profile_id ?? "",
       starts_at: appointment ? toLocalInput(appointment.starts_at) : "",
-      notes: appointment?.notes ?? ""
-    }
+      notes: appointment?.notes ?? "",
+    },
   });
 
   // Auto-set staff_profile_id for staff role when their profile loads
@@ -87,7 +80,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
       starts_at: startsAt.toISOString(),
       ends_at: endsAt.toISOString(),
       price: service.base_price,
-      notes: data.notes || null
+      notes: data.notes || null,
     };
 
     try {

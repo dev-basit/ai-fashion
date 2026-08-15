@@ -5,6 +5,8 @@ export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "
 export type MessageType = "text" | "image" | "file" | "system";
 export type PlanStatus = "draft" | "active" | "completed" | "cancelled";
 export type NotificationType = "appointment" | "message" | "order" | "system" | "reminder";
+export type ClientSegment = "all" | "new" | "recurring" | "vip";
+export type DatePreset = "today" | "7d" | "30d" | "custom";
 
 export type Profile = {
   id: string;

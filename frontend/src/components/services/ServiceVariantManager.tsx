@@ -91,7 +91,12 @@ export function ServiceVariantManager({ serviceId }: ServiceVariantManagerProps)
             />
           </div>
         </div>
-        <Button size="sm" onClick={addVariant} disabled={createVariant.isPending || !name.trim()} className="w-full">
+        <Button
+          size="sm"
+          onClick={addVariant}
+          disabled={createVariant.isPending || !name.trim()}
+          className="w-full"
+        >
           <Plus className="h-4 w-4 mr-1" /> Add Variant
         </Button>
       </div>

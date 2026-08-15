@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import { Calendar, Clock } from "lucide-react";
 import Link from "next/link";
-import { ROUTES } from "@/config/constants";
+import { ROUTES, PRESET_RANGE_LABEL } from "@/config/constants";
+import { computeDateRange } from "@/utils/date";
 import { StatsCard } from "./StatsCard";
-import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
-import type { DatePreset } from "./DateRangeFilter";
+import { DateRangeFilter } from "./DateRangeFilter";
+import type { DatePreset } from "@/types/database";
 import { useAppointments } from "@/hooks/useAppointments";
 import { formatDate, formatTime } from "@/utils/date";
 import { AppointmentStatusBadge } from "@/components/common/StatusBadge";
@@ -36,9 +37,7 @@ export function CustomerDashboard({ userId }: { userId: string }) {
   const now = new Date().toISOString();
   const upcomingCount = useMemo(
     () =>
-      ((allAptsRaw ?? []) as Appointment[]).filter(
-        (a) => a.starts_at >= now && a.status !== "cancelled",
-      ).length,
+      ((allAptsRaw ?? []) as Appointment[]).filter((a) => a.starts_at >= now && a.status !== "cancelled").length,
     [allAptsRaw],
   );
 

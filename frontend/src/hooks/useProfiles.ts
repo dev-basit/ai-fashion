@@ -31,11 +31,11 @@ export function useProfile(id: string | null) {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      id,
-      ...updates
-    }: { id: string } & Parameters<typeof profilesService.update>[1]) => {
-      const { data, error } = await profilesService.update(id, updates as Parameters<typeof profilesService.update>[1]);
+    mutationFn: async ({ id, ...updates }: { id: string } & Parameters<typeof profilesService.update>[1]) => {
+      const { data, error } = await profilesService.update(
+        id,
+        updates as Parameters<typeof profilesService.update>[1],
+      );
       if (error) throw new Error(error.message);
       return data as Profile;
     },

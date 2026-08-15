@@ -1,9 +1,9 @@
 import axios from "axios";
 import { getBrowserClient } from "./supabase";
-import { env } from "@/config/config";
+import { config } from "@/config/config";
 
 const http = axios.create({
-  baseURL: env.app.backend_url,
+  baseURL: config.app.backend_url,
   headers: { "Content-Type": "application/json" },
 });
 

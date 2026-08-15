@@ -43,7 +43,9 @@ export function useCreateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<Product>) => {
-      const { data, error } = await productsService.create(payload as Parameters<typeof productsService.create>[0]);
+      const { data, error } = await productsService.create(
+        payload as Parameters<typeof productsService.create>[0],
+      );
       if (error) throw new Error(error.message);
       return data as Product;
     },
@@ -57,7 +59,10 @@ export function useUpdateProduct() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<Product>) => {
-      const { data, error } = await productsService.update(id, payload as Parameters<typeof productsService.update>[1]);
+      const { data, error } = await productsService.update(
+        id,
+        payload as Parameters<typeof productsService.update>[1],
+      );
       if (error) throw new Error(error.message);
       return data as Product;
     },
@@ -100,7 +105,9 @@ export function useCreateProductCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Partial<ProductCategory>) => {
-      const { data, error } = await productsService.createCategory(payload as Parameters<typeof productsService.createCategory>[0]);
+      const { data, error } = await productsService.createCategory(
+        payload as Parameters<typeof productsService.createCategory>[0],
+      );
       if (error) throw new Error(error.message);
       return data as ProductCategory;
     },

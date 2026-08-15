@@ -21,14 +21,21 @@ import { APPOINTMENT_STATUS_TRANSITIONS } from "@/config/constants";
 import type { AppointmentListProps } from "@/types/props";
 import type { Appointment, AppointmentStatus } from "@/types/database";
 
-
 export function AppointmentList({ appointments, isLoading, role, onRefresh }: AppointmentListProps) {
   const [updating, setUpdating] = useState<string | null>(null);
   const updateStatusMutation = useUpdateAppointmentStatus();
 
   const updateStatus = (id: string, status: AppointmentStatus) => {
     setUpdating(id);
-    updateStatusMutation.mutate({ id, status }, { onSuccess: () => { setUpdating(null); onRefresh(); } });
+    updateStatusMutation.mutate(
+      { id, status },
+      {
+        onSuccess: () => {
+          setUpdating(null);
+          onRefresh();
+        },
+      },
+    );
   };
 
   if (isLoading) return <PageLoading />;

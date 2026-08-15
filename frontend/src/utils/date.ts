@@ -13,6 +13,8 @@ import {
   startOfMonth,
   endOfMonth,
 } from "date-fns";
+import type { DatePreset } from "@/types/database";
+import type { DateRange } from "@/services/reports.service";
 
 export function formatDate(date: string | Date, fmt = "MMM d, yyyy"): string {
   const d = typeof date === "string" ? parseISO(date) : date;
@@ -65,4 +67,41 @@ export function minutesBetween(start: string | Date, end: string | Date): number
   const s = typeof start === "string" ? parseISO(start) : start;
   const e = typeof end === "string" ? parseISO(end) : end;
   return differenceInMinutes(e, s);
+}
+
+export function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 16);
+}
+
+export function computeDateRange(preset: DatePreset, customFrom = "", customTo = ""): DateRange {
+  const now = new Date();
+  if (preset === "today") {
+    const s = new Date(now);
+    s.setHours(0, 0, 0, 0);
+    const e = new Date(now);
+    e.setHours(23, 59, 59, 999);
+    return { from: s.toISOString(), to: e.toISOString() };
+  }
+  if (preset === "7d") {
+    const e = new Date(now);
+    e.setHours(23, 59, 59, 999);
+    const s = new Date(now);
+    s.setDate(s.getDate() - 6);
+    s.setHours(0, 0, 0, 0);
+    return { from: s.toISOString(), to: e.toISOString() };
+  }
+  if (preset === "30d") {
+    const e = new Date(now);
+    e.setHours(23, 59, 59, 999);
+    const s = new Date(now);
+    s.setDate(s.getDate() - 29);
+    s.setHours(0, 0, 0, 0);
+    return { from: s.toISOString(), to: e.toISOString() };
+  }
+  return {
+    from: customFrom ? new Date(customFrom + "T00:00:00").toISOString() : "",
+    to: customTo ? new Date(customTo + "T23:59:59").toISOString() : "",
+  };
 }

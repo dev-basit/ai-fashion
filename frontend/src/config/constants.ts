@@ -1,4 +1,11 @@
-import type { AppointmentStatus, PaymentStatus, PlanStatus } from "@/types/database";
+import type {
+  AppointmentStatus,
+  PaymentStatus,
+  PlanStatus,
+  ClientSegment,
+  DatePreset,
+  ConsultationField,
+} from "@/types/database";
 
 export const APP_NAME = "Glow By Miral";
 
@@ -170,4 +177,43 @@ export const ROLE_DESCRIPTIONS: Record<string, string> = {
   admin: "Full access to manage the salon, staff, clients, and all settings.",
   staff: "Can manage appointments, clients, consultations, and treatment plans.",
   customer: "Can book appointments, browse products, and view personal records.",
+};
+
+export const CLIENT_SEGMENTS: { value: ClientSegment; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "new", label: "New" },
+  { value: "recurring", label: "Recurring" },
+  { value: "vip", label: "VIP" },
+];
+
+export const CONSULTATION_FIELD_TYPES: ConsultationField["type"][] = [
+  "text",
+  "textarea",
+  "select",
+  "radio",
+  "checkbox",
+  "date",
+];
+
+export const TREATMENT_PLAN_DURATIONS = [30, 60, 90];
+
+export const DEFAULT_STAFF_SCHEDULE_ROWS = DAYS_OF_WEEK.map((_, i) => ({
+  day_of_week: i,
+  start_time: "09:00",
+  end_time: "17:00",
+  is_working: i !== 0,
+}));
+
+export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
+  today: "Today",
+  "7d": "Last 7 Days",
+  "30d": "Last Month",
+  custom: "Custom Range",
+};
+
+export const PRESET_RANGE_LABEL: Record<DatePreset, string> = {
+  today: "Today",
+  "7d": "Last 7 Days",
+  "30d": "Last 30 Days",
+  custom: "Selected Period",
 };

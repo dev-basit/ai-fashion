@@ -6,4 +6,4 @@ export type AuthState = {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
-}
+};

@@ -14,7 +14,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -22,7 +21,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { formatInitials } from "@/utils/format";
 import { formatRelativeDate } from "@/utils/date";
 import type { HeaderProps } from "@/types/props";
-
 
 export function Header({ profile: serverProfile }: HeaderProps) {
   const { toggleSidebar } = useUIStore();

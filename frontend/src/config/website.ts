@@ -73,9 +73,21 @@ export const LANDING_HERO_PHOTOS: HeroPhoto[] = [
 ];
 
 export const LANDING_CLIENT_AVATARS: ClientAvatar[] = [
-  { name: "Sarah M.", tag: "VIP",     src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=75&auto=format&fit=crop&crop=face" },
-  { name: "James K.", tag: "Regular", src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=75&auto=format&fit=crop&crop=face" },
-  { name: "Aisha R.", tag: "New",     src: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=75&auto=format&fit=crop&crop=face" },
+  {
+    name: "Sarah M.",
+    tag: "VIP",
+    src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=75&auto=format&fit=crop&crop=face",
+  },
+  {
+    name: "James K.",
+    tag: "Regular",
+    src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=75&auto=format&fit=crop&crop=face",
+  },
+  {
+    name: "Aisha R.",
+    tag: "New",
+    src: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=75&auto=format&fit=crop&crop=face",
+  },
 ];
 
 export const LANDING_FEATURES: FeatureItem[] = [

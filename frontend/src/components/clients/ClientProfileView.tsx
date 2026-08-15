@@ -21,13 +21,7 @@ import { formatInitials, formatCurrency } from "@/utils/format";
 import { formatDate, formatTime } from "@/utils/date";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import type { ClientProfileViewProps } from "@/types/props";
-import type {
-  Appointment,
-  Order,
-  ConsultationRecord,
-  ClientTreatmentPlan,
-} from "@/types/database";
-
+import type { Appointment, Order, ConsultationRecord, ClientTreatmentPlan } from "@/types/database";
 
 export function ClientProfileView({ client, role, staffProfileId }: ClientProfileViewProps) {
   const router = useRouter();

@@ -19,7 +19,6 @@ import type { TreatmentPlansViewProps } from "@/types/props";
 import type { ClientTreatmentPlan, TreatmentPlanTemplate } from "@/types/database";
 import { PLAN_STATUS_LABELS } from "@/config/constants";
 
-
 export function TreatmentPlansView({ role, userId }: TreatmentPlansViewProps) {
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
   const [editTemplate, setEditTemplate] = useState<TreatmentPlanTemplate | null>(null);

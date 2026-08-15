@@ -18,7 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ProductForm } from "./ProductForm";
 import { ProductInventory } from "./ProductInventory";
@@ -28,7 +28,6 @@ import { OrderList } from "./OrderList";
 import { formatCurrency } from "@/utils/format";
 import type { ProductsViewProps } from "@/types/props";
 import type { Product } from "@/types/database";
-
 
 export function ProductsView({ role, userId }: ProductsViewProps) {
   const [search, setSearch] = useState("");

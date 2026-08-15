@@ -10,8 +10,8 @@ import type {
   TreatmentPlanTemplate,
   Product,
   ConsultationFormTemplate,
+  DatePreset,
 } from "@/types/database";
-import type { DatePreset } from "@/components/dashboard/DateRangeFilter";
 import type { DateRange } from "@/services/reports.service";
 
 // === Appointments ===

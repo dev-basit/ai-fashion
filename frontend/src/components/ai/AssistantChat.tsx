@@ -8,14 +8,19 @@ import { cn, relativeTime } from "@/lib/utils";
 import type { AIChatMessage } from "@/types/props";
 import type { AiConversation } from "@/types/database";
 import { SUGGESTED_QUESTIONS } from "@/config/ai";
-import { useAIConversations, useAIMessages, useCreateAIConversation, useDeleteAIConversation } from "@/hooks/useAI";
+import {
+  useAIConversations,
+  useAIMessages,
+  useCreateAIConversation,
+  useDeleteAIConversation,
+} from "@/hooks/useAI";
 import { getBrowserClient } from "@/services/supabase";
 import { useAIStore } from "@/store/ai.store";
 import { useAuth } from "@/hooks/useAuth";
 import { QK } from "@/config/query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { env } from "@/config/config";
+import { config } from "@/config/config";
 
 export function AssistantChat() {
   const { user } = useAuth();
@@ -122,7 +127,7 @@ export function AssistantChat() {
         const {
           data: { session },
         } = await getBrowserClient().auth.getSession();
-        const backendUrl = env.app.backend_url;
+        const backendUrl = config.app.backend_url;
         const res = await fetch(`${backendUrl}/ai/chat`, {
           method: "POST",
           headers: {

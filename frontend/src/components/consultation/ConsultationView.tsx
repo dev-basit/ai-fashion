@@ -19,7 +19,6 @@ import { formatDate } from "@/utils/date";
 import type { ConsultationViewProps } from "@/types/props";
 import type { ConsultationFormTemplate, ConsultationRecord } from "@/types/database";
 
-
 export function ConsultationView({ role, userId, staffProfileId }: ConsultationViewProps) {
   const [showBuilder, setShowBuilder] = useState(false);
   const [editTemplate, setEditTemplate] = useState<ConsultationFormTemplate | null>(null);

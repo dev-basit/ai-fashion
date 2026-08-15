@@ -3,22 +3,22 @@
 import { useState } from "react";
 import { Calendar, DollarSign, Users, Clock } from "lucide-react";
 import Link from "next/link";
-import { ROUTES } from "@/config/constants";
+import { ROUTES, PRESET_RANGE_LABEL } from "@/config/constants";
+import { computeDateRange } from "@/utils/date";
 import { StatsCard } from "./StatsCard";
-import { DateRangeFilter, computeDateRange, PRESET_RANGE_LABEL } from "./DateRangeFilter";
-import type { DatePreset } from "./DateRangeFilter";
+import { DateRangeFilter } from "./DateRangeFilter";
+import type { DatePreset } from "@/types/database";
 import type { DateRange } from "@/services/reports.service";
 import { useDashboardStats } from "@/hooks/useReports";
 import { useAppointments } from "@/hooks/useAppointments";
 import { formatCurrency } from "@/utils/format";
 import { formatTime, formatDate } from "@/utils/date";
 import { AppointmentStatusBadge } from "@/components/common/StatusBadge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import type { Appointment } from "@/types/database";
 
-export function AdminDashboard({ userId }: { userId: string }) {
+export function AdminDashboard() {
   const [preset, setPreset] = useState<DatePreset>("today");
   const [range, setRange] = useState<DateRange>(() => computeDateRange("today"));
 

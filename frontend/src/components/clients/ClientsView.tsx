@@ -17,22 +17,13 @@ import { ClientForm } from "./ClientForm";
 import { formatInitials } from "@/utils/format";
 import { formatDate } from "@/utils/date";
 import { differenceInDays } from "date-fns";
+import { CLIENT_SEGMENTS } from "@/config/constants";
 import type { ClientsViewProps } from "@/types/props";
-import type { Profile } from "@/types/database";
-
-
-type Segment = "all" | "new" | "recurring" | "vip";
-
-const SEGMENTS: { value: Segment; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "new", label: "New" },
-  { value: "recurring", label: "Recurring" },
-  { value: "vip", label: "VIP" },
-];
+import type { Profile, ClientSegment } from "@/types/database";
 
 export function ClientsView({ role }: ClientsViewProps) {
   const [search, setSearch] = useState("");
-  const [segment, setSegment] = useState<Segment>("all");
+  const [segment, setSegment] = useState<ClientSegment>("all");
   const [showForm, setShowForm] = useState(false);
   const { data: clientsRaw, isLoading } = useClients(search || undefined);
   const clients = (clientsRaw ?? []) as Profile[];
@@ -77,7 +68,7 @@ export function ClientsView({ role }: ClientsViewProps) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {SEGMENTS.map((s) => (
+        {CLIENT_SEGMENTS.map((s) => (
           <button
             key={s.value}
             onClick={() => setSegment(s.value)}
@@ -131,10 +122,7 @@ export function ClientsView({ role }: ClientsViewProps) {
           <DialogHeader>
             <DialogTitle>Add Client</DialogTitle>
           </DialogHeader>
-          <ClientForm
-            onSuccess={() => setShowForm(false)}
-            onCancel={() => setShowForm(false)}
-          />
+          <ClientForm onSuccess={() => setShowForm(false)} onCancel={() => setShowForm(false)} />
         </DialogContent>
       </Dialog>
     </div>

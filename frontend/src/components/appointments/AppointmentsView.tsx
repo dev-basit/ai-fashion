@@ -16,7 +16,6 @@ import { PageLoading } from "@/components/common/LoadingSpinner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { AppointmentsViewProps } from "@/types/props";
 
-
 export function AppointmentsView({ role, userId, staffProfileId }: AppointmentsViewProps) {
   const [showForm, setShowForm] = useState(false);
   const { view, setView, statusFilter, staffFilter, serviceFilter } = useAppointmentsStore();
@@ -26,7 +25,7 @@ export function AppointmentsView({ role, userId, staffProfileId }: AppointmentsV
     ...(role === "staff" && staffProfileId ? { staffProfileId } : {}),
     ...(role === "admin" && staffFilter ? { staffProfileId: staffFilter } : {}),
     ...(serviceFilter ? { serviceId: serviceFilter } : {}),
-    ...(statusFilter !== "all" ? { status: statusFilter } : {})
+    ...(statusFilter !== "all" ? { status: statusFilter } : {}),
   };
 
   const { data: appointmentsRaw, isLoading, refetch } = useAppointments(filters);

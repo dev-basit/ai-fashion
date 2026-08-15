@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 import { useCreateConsultationTemplate, useUpdateConsultationTemplate } from "@/hooks/useConsultation";
+import { CONSULTATION_FIELD_TYPES } from "@/config/constants";
+import { newConsultationField } from "@/utils/consultation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,18 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { ConsultationTemplateBuilderProps } from "@/types/props";
 import type { ConsultationField } from "@/types/database";
 
-const FIELD_TYPES: ConsultationField["type"][] = ["text", "textarea", "select", "radio", "checkbox", "date"];
-
-
-function newField(): ConsultationField {
-  return { id: crypto.randomUUID(), label: "", type: "text", required: false, options: [] };
-}
-
 export function ConsultationTemplateBuilder({ template, onSuccess, onCancel }: ConsultationTemplateBuilderProps) {
   const isEdit = !!template;
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
-  const [fields, setFields] = useState<ConsultationField[]>(template?.fields ?? [newField()]);
+  const [fields, setFields] = useState<ConsultationField[]>(template?.fields ?? [newConsultationField()]);
   const createTemplate = useCreateConsultationTemplate();
   const updateTemplate = useUpdateConsultationTemplate();
   const saving = createTemplate.isPending || updateTemplate.isPending;
@@ -82,7 +77,7 @@ export function ConsultationTemplateBuilder({ template, onSuccess, onCancel }: C
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {FIELD_TYPES.map((t) => (
+                  {CONSULTATION_FIELD_TYPES.map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
                     </SelectItem>
@@ -102,7 +97,7 @@ export function ConsultationTemplateBuilder({ template, onSuccess, onCancel }: C
                     options: e.target.value
                       .split(",")
                       .map((o) => o.trim())
-                      .filter(Boolean)
+                      .filter(Boolean),
                   })
                 }
                 placeholder="Options, comma-separated"
@@ -111,7 +106,7 @@ export function ConsultationTemplateBuilder({ template, onSuccess, onCancel }: C
             )}
           </div>
         ))}
-        <Button size="sm" variant="outline" onClick={() => setFields((p) => [...p, newField()])}>
+        <Button size="sm" variant="outline" onClick={() => setFields((p) => [...p, newConsultationField()])}>
           <Plus className="h-4 w-4 mr-1" /> Add Field
         </Button>
       </div>

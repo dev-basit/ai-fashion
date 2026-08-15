@@ -61,10 +61,7 @@ export function ReportsView({ role }: ReportsViewProps) {
     () => (revenueRaw ?? []) as Array<{ price: number; discount: number; starts_at: string }>,
     [revenueRaw],
   );
-  const aptRows = useMemo(
-    () => (aptRaw ?? []) as Array<{ starts_at: string; status: string }>,
-    [aptRaw],
-  );
+  const aptRows = useMemo(() => (aptRaw ?? []) as Array<{ starts_at: string; status: string }>, [aptRaw]);
   const clientRows = useMemo(() => (clientRaw ?? []) as unknown[], [clientRaw]);
   const orderRows = useMemo(
     () => (orderRaw ?? []) as Array<{ total_amount: number; created_at: string }>,
