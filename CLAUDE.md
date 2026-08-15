@@ -81,13 +81,14 @@ supabase db reset         # DESTRUCTIVE — wipes all data, always ask user firs
 
 ### Backend
 
-| Layer     | Library                      | Notes                                                       |
-| --------- | ---------------------------- | ----------------------------------------------------------- |
-| Framework | FastAPI + uvicorn            | Port 8000                                                         |
-| Language  | Python 3.14                  |                                                                   |
-| Database  | supabase-py ^2               | `get_admin_db_client()` (singleton) + `get_db_client(token)`      |
-| AI / LLM  | langchain-openai + langgraph | RAG + streaming agent with tool use                               |
-| Config    | pydantic-settings            | `app/config/config.py` — class `Config`, instance `config`        |
+| Layer     | Library                      | Notes                                                                      |
+| --------- | ---------------------------- | -------------------------------------------------------------------------- |
+| Framework | FastAPI + uvicorn            | Port 8000                                                                  |
+| Language  | Python 3.14                  |                                                                            |
+| Database  | supabase-py ^2               | `get_admin_db_client()` (singleton) + `get_db_client(token)`               |
+| AI / LLM  | langchain-openai + langgraph | RAG + streaming agent with tool use                                        |
+| Config    | pydantic-settings            | `app/config/config.py` — class `Config`, instance `config`                 |
+| Auth      | PyJWT + cryptography         | Local JWT verification via JWKS — no network call per request in `main.py` |
 
 ---
 
@@ -223,7 +224,7 @@ backend/
 
 ### Supabase Clients (Backend)
 
-Auth is handled by HTTP middleware in `main.py` — it validates the JWT and sets context variables for the lifetime of each request. Route handlers and services never take auth as a parameter.
+Auth is handled by HTTP middleware in `main.py` — it validates the JWT **locally** via `PyJWKClient` (fetches the public key once from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, then caches it). No network call per request. On success it builds a `SimpleNamespace(id, email, user_metadata)` and sets context variables for the request lifetime. Route handlers and services never take auth as a parameter.
 
 | Client                                    | When to use                                                                 |
 | ----------------------------------------- | --------------------------------------------------------------------------- |
@@ -725,3 +726,6 @@ Tools call service functions directly — no HTTP round-trip. The RLS-scoped `ge
 - **`useCreateConversation` hook**: in `useChat.ts` — wraps `chatService.getOrCreateDirectConversation`. Use this in components, never call `chatService` directly.
 - **supabase-py v2 storage API**: `create_bucket(id, options={...})` not `create_bucket(id, {...})`; upload `file_options` uses `"content-type"` (kebab) and `"upsert": "true"` (string); `get_public_url()` returns `str` not a dict; `list_users()` returns a plain list not an object with `.users`.
 - **Seed script requires venv**: `backend/supabase/` shadows the `supabase` package name for system Python. Always run `venv/bin/python -m scripts.seed` or activate the venv first.
+- **`get_current_user()` returns `SimpleNamespace`**: Fields are `.id`, `.email`, `.user_metadata` (a dict). It is NOT the full Supabase `User` object — only these three fields are populated from the JWT claims.
+- **JWT auth uses JWKS (ES256)**: The middleware fetches the public key from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` once at startup and caches it. Local Supabase uses `super-secret-jwt-token-with-at-least-32-characters-long` as its HS256 fallback but newer CLI versions issue ES256 tokens — JWKS handles both. No `supabase_jwt_secret` env var is needed.
+- **`requirements.txt` is direct deps only**: Not a `pip freeze` dump. Only the 15 packages the backend directly imports. Transitive dependencies are resolved by pip automatically.

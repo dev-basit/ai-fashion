@@ -310,7 +310,8 @@ Navigate to http://localhost:8000/docs for interactive Swagger UI.
 Frontend (Next.js)
     ↓ axios + Bearer JWT
 auth_middleware (main.py)
-    ↓ validates JWT, sets get_db() / get_current_user() / get_token() in context vars
+    ↓ validates JWT locally via PyJWKClient (JWKS — no network call per request)
+    ↓ sets get_db() / get_current_user() / get_token() in context vars
 API Routes (FastAPI)
     ↓ parse params, call services (no auth params needed)
 Business Logic (Services)
@@ -322,7 +323,8 @@ Database
 
 ### Key Patterns
 
-- **Auth via middleware** — `auth_middleware` in `main.py` validates the JWT and sets context variables (`_db_var`, `_user_var`, `_token_var`) for the request lifetime. Routes need no auth parameters.
+- **Auth via middleware** — `auth_middleware` in `main.py` validates the JWT **locally** using `PyJWKClient`. It fetches the Supabase public key once from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` (cached), verifies the signature, and builds `SimpleNamespace(id, email, user_metadata)` from the JWT claims. No network call on every request. Sets `_db_var`, `_user_var`, `_token_var` context variables for the request lifetime.
+- **`get_current_user()` returns `SimpleNamespace`** — fields `.id`, `.email`, `.user_metadata` (dict). Not the full Supabase User object.
 - **Sync handlers** (`def`, not `async def`) for Supabase CRUD — FastAPI runs them in a thread pool
 - **RLS-scoped client via context** — services call `get_db()` from `app.core.context` (no argument needed)
 - **Admin client** (`get_admin_db_client()`) only for bypass operations (user creation, stock decrement, notifications)
@@ -388,6 +390,12 @@ source venv/bin/activate  # macOS/Linux
 # or
 venv\Scripts\activate      # Windows
 ```
+
+### 401 Unauthorized on All Routes
+
+- The JWT middleware fetches the JWKS public key from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` — ensure Supabase is running and `SUPABASE_URL` is correct
+- Local Supabase (Docker): newer CLI versions issue ES256 tokens (not HS256) — the JWKS approach handles both automatically
+- Token must be sent as `Authorization: Bearer <token>` header
 
 ### Database Connection Failed
 
