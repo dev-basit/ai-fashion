@@ -25,7 +25,7 @@ export const staffService = {
   async getByProfileId(profileId: string) {
     try {
       const res = await http.get(API_ROUTES.staff, { params: { profileId } });
-      return responseData(Array.isArray(res.data.data) ? (res.data.data[0] ?? null) : res.data.data);
+      return responseData(res.data.data ?? []);
     } catch (e) {
       return responseError(e);
     }

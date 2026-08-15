@@ -1,10 +1,16 @@
+from types import SimpleNamespace
+
+import jwt
+from jwt import PyJWKClient
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config.config import config
 from app.core.context import _db_var, _user_var, _token_var
-from app.core.supabase import get_admin_db_client, get_db_client
+from app.core.supabase import get_db_client
+
+_jwks_client = PyJWKClient(f"{config.supabase_url}/auth/v1/.well-known/jwks.json", cache_keys=True)
 from app.routes import health
 from app.routes import me, profiles
 from app.routes import salon_services, products, clients, staff
@@ -31,11 +37,24 @@ async def auth_middleware(request: Request, call_next):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     token = auth_header.removeprefix("Bearer ")
-    response = get_admin_db_client().auth.get_user(token)
-    if not response.user:
+    try:
+        signing_key = _jwks_client.get_signing_key_from_jwt(token)
+        claims = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["ES256", "RS256", "HS256"],
+            options={"verify_aud": False},
+        )
+    except Exception as e:
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
-    t1 = _user_var.set(response.user)
+    user = SimpleNamespace(
+        id=claims["sub"],
+        email=claims.get("email", ""),
+        user_metadata=claims.get("user_metadata", {}),
+    )
+
+    t1 = _user_var.set(user)
     t2 = _token_var.set(token)
     t3 = _db_var.set(get_db_client(token))
     try:
