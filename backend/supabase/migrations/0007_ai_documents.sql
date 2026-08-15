@@ -23,7 +23,6 @@ create policy "authenticated users can read chunks"
   to authenticated
   using (true);
 
--- Role-scoped similarity search — called server-side only via getAdminClient
 create or replace function match_documents(
   query_embedding  vector(1536),
   user_role        text,

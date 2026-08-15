@@ -1,8 +1,9 @@
 import axios from "axios";
 import { getBrowserClient } from "./supabase";
+import { env } from "@/config/env";
 
 const http = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000",
+  baseURL: env.app.backend_url,
   headers: { "Content-Type": "application/json" },
 });
 

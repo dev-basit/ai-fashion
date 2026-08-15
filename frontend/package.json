@@ -6,9 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed": "tsx --env-file=.env src/scripts/seed.ts",
-    "ingest-kb": "tsx --env-file=.env src/scripts/ingest-kb.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

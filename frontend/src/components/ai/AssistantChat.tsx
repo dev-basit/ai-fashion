@@ -13,6 +13,7 @@ import { useAIStore } from "@/store/ai.store";
 import { useAuth } from "@/hooks/useAuth";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { env } from "@/config/env";
 
 export function AssistantChat() {
   const { user } = useAuth();
@@ -140,8 +141,10 @@ export function AssistantChat() {
       }
 
       try {
-        const { data: { session } } = await getBrowserClient().auth.getSession();
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+        const {
+          data: { session },
+        } = await getBrowserClient().auth.getSession();
+        const backendUrl = env.app.backend_url;
         const res = await fetch(`${backendUrl}/ai/chat`, {
           method: "POST",
           headers: {

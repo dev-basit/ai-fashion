@@ -8,14 +8,15 @@ Premium parlor/salon/spa management app. Multi-role (admin / staff / customer) w
 
 ## Commands
 
+See **`backend/README.md`** for complete server, database, and script documentation.
+
+### Frontend (Next.js)
+
 ```bash
-# Frontend (Next.js)
 cd frontend
 npm run dev          # Start dev server (port 3000)
 npm run build        # Production build
 npm run lint         # ESLint
-npm run seed         # Seed DB — tsx --env-file=.env src/scripts/seed.ts
-npm run ingest-kb    # Embed knowledge-base.md → Supabase (requires OPENAI_API_KEY in backend)
 
 # Type-check (no emit)
 npx tsc --noEmit
@@ -25,12 +26,31 @@ npx prettier --write "src/**/*.{ts,tsx,css,json}" "*.{ts,tsx,mjs,json}"
 
 # npm install (always use these flags — root-owned cache + legacy peer deps)
 npm install --legacy-peer-deps --cache /tmp/npm-cache-glow
+```
 
-# Backend (FastAPI)
+### Backend (FastAPI)
+
+Run from `backend/` directory. See `backend/README.md` for full details:
+
+```bash
 cd backend
+
+# Start development server
 uvicorn main:app --reload --port 8000
 
-# DB migrations (run from project root)
+# Seed database
+python -m scripts.seed
+
+# Ingest knowledge base
+python -m scripts.ingest_kb
+```
+
+### Database Migrations
+
+Run from `backend/` directory (migrations are in `backend/supabase/`):
+
+```bash
+cd backend
 supabase db push          # Apply new migrations WITHOUT resetting data (preferred)
 supabase db reset         # DESTRUCTIVE — wipes all data, always ask user first
 ```
@@ -115,12 +135,9 @@ frontend/src/
     AuthProvider.tsx     # Calls useAuthStore.initialize() on mount
     ThemeProvider.tsx
   proxy.ts               # Auth/role guard — Next.js 16 Middleware (proxy.ts not middleware.ts)
-  scripts/
-    seed.ts              # DB seed script
   services/
     supabase.ts          # getBrowserClient() — singleton browser Supabase client (realtime + auth)
     supabase-server.ts   # getServerClient() — cookie-based server client (server components only)
-    supabase-admin.ts    # getAdminClient() — service-role, bypasses RLS (server only, not used in components)
     http.ts              # Axios (baseURL: NEXT_PUBLIC_BACKEND_URL) — Bearer token injected per request
     *.service.ts         # Thin HTTP clients — call FastAPI via http.ts, return { data, error }
     ai-conversations.service.ts  # Exception: uses http.ts for AI conversation history
@@ -136,8 +153,15 @@ frontend/src/
 backend/
   main.py                # FastAPI app, CORS, router registration
   requirements.txt
-  knowledge-base.md      # AI knowledge base source — edit here, then run npm run ingest-kb
+  knowledge-base.md      # AI knowledge base source — edit here, then run python -m scripts.ingest_kb
   .env                   # Backend secrets (gitignored)
+  .env.example           # Template for .env
+  scripts/
+    seed.py              # Database seeding — python -m scripts.seed
+    ingest_kb.py         # Knowledge base ingestion — python -m scripts.ingest_kb
+  supabase/
+    migrations/          # Database migrations (run: supabase db push from project root)
+    config.toml          # Supabase local development config
   app/
     config/
       settings.py        # Pydantic Settings — all env vars
@@ -163,17 +187,10 @@ backend/
       tools/             # Role-scoped tools (appointments, clients, orders, etc.)
         utils.py         # get_supabase(config), get_user_id(config) — shared helpers
     schemas/             # Pydantic request/response models
+    utils/
+      product_svgs.py    # PRODUCT_SVGS dictionary — 15 product icons as SVG strings
+      seed_data.py       # Seed data: SERVICE_CATEGORIES, SERVICES, PRODUCTS, CONSULTATION_TEMPLATES, TREATMENT_PLAN_TEMPLATES, BUSINESS_SETTINGS()
 
-supabase/
-  migrations/
-    0001_initial_schema.sql   # Canonical DB schema — DO NOT EDIT
-    0002_grants.sql
-    0003_profiles_select_authenticated.sql
-    0004_remove_service_tags.sql
-    0005_fix_chat_rls_recursion.sql
-    0006_consultation_records_customer_insert.sql
-    0007_ai_documents.sql     # document_chunks (pgvector), match_documents()
-    0008_ai_usage.sql         # ai_usage table for rate limiting
 ```
 
 ---
@@ -182,7 +199,7 @@ supabase/
 
 ### Architecture: Frontend is Pure UI
 
-- **No business logic in the frontend.** All Supabase queries, notifications, user creation, AI, etc. live in the FastAPI backend.
+- **No business logic in the frontend.** All Supabase queries, notifications, user creation, AI, RAG, etc. live in the FastAPI backend.
 - **No Next.js API routes** — `src/app/api/auth/callback/` is the only exception (Supabase SSR code exchange).
 - **`src/ai/` is deleted** — the AI system is in `backend/app/ai/`.
 - The frontend `http.ts` axios instance points to `NEXT_PUBLIC_BACKEND_URL` (default `http://localhost:8000`).
@@ -201,7 +218,6 @@ supabase/
 | -------------------- | ---------------------------- | -------------------------------------------------------- |
 | `getBrowserClient()` | `@/services/supabase`        | Client components only — Realtime, `http.ts` auth header |
 | `getServerClient()`  | `@/services/supabase-server` | Server components only (reads session cookies)           |
-| `getAdminClient()`   | `@/services/supabase-admin`  | Not used in components — backend handles privileged ops  |
 
 **Never import `supabase-server` or `supabase-admin` into a client component.**
 
@@ -441,26 +457,42 @@ Import from `@/services/reports.service` — `{ from: string; to: string }`.
 
 ### Frontend (`frontend/.env.local`)
 
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-```
-
-### Backend (`backend/.env`)
+Public env only (prefixed with `NEXT_PUBLIC_`):
 
 ```
-SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY          # service-role key — never expose to client
-OPENAI_API_KEY
-OPENAI_CHAT_MODEL            # default: gpt-4o-mini
-OPENAI_EMBEDDING_MODEL       # default: text-embedding-3-small
-AI_DAILY_LIMIT               # default: 20
-FRONTEND_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL                # Supabase project URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY    # Supabase publishable/anon key
+NEXT_PUBLIC_BACKEND_URL                 # Backend API URL (default: http://localhost:8000)
 ```
 
 All frontend env accessed via `src/config/env.ts`. **Never access `process.env` directly** in the frontend.
+
+### Backend (`backend/.env`)
+
+**Supabase:**
+
+```
+SUPABASE_URL                 # Supabase project URL
+SUPABASE_PUBLISHABLE_KEY     # Supabase publishable/anon key
+SUPABASE_SECRET_KEY          # Service-role key (never expose to client)
+```
+
+**OpenAI (AI features only):**
+
+```
+OPENAI_API_KEY               # Required for AI chat, embeddings, RAG
+OPENAI_CHAT_MODEL            # LLM model (default: gpt-4o-mini)
+OPENAI_EMBEDDING_MODEL       # Embedding model (default: text-embedding-3-small)
+AI_DAILY_LIMIT               # Daily AI calls per user (default: 20)
+```
+
+**Frontend Integration:**
+
+```
+FRONTEND_URL                 # Frontend origin (default: http://localhost:3000)
+```
+
+**⚠️ Important:** OpenAI keys are **backend-only**. Never expose them to the frontend.
 
 ---
 
