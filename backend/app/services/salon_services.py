@@ -27,7 +27,7 @@ def get_service(service_id: str) -> Service | None:
 
 
 def create_service(body: dict) -> Service:
-    result = get_db().table("services").insert(body).select().single().execute()
+    result = get_db().table("services").insert(body).select().maybe_single().execute()
     return Service.model_validate(result.data)
 
 
@@ -37,7 +37,7 @@ def update_service(service_id: str, body: dict) -> Service | None:
         .update(body)
         .eq("id", service_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:
@@ -61,7 +61,7 @@ def list_categories() -> list:
 
 
 def create_category(body: dict) -> ServiceCategory:
-    result = get_db().table("service_categories").insert(body).select().single().execute()
+    result = get_db().table("service_categories").insert(body).select().maybe_single().execute()
     return ServiceCategory.model_validate(result.data)
 
 
@@ -84,7 +84,7 @@ def update_category(category_id: str, body: dict) -> ServiceCategory | None:
         .update(body)
         .eq("id", category_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:
@@ -112,7 +112,7 @@ def create_variant(service_id: str, body: dict) -> ServiceVariant:
         get_db().table("service_variants")
         .insert({**body, "service_id": service_id})
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     return ServiceVariant.model_validate(result.data)
@@ -124,7 +124,7 @@ def update_variant(variant_id: str, body: dict) -> ServiceVariant | None:
         .update(body)
         .eq("id", variant_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
@@ -35,15 +35,15 @@ def get_plan(plan_id: str) -> ClientTreatmentPlan | None:
 
 def create_plan(body: dict) -> ClientTreatmentPlan:
     db = get_db()
-    result = db.table("client_treatment_plans").insert(body).select().single().execute()
+    result = db.table("client_treatment_plans").insert(body).select().maybe_single().execute()
     data = result.data
     validated_data = ClientTreatmentPlan.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
-        client_res = db.table("profiles").select("full_name").eq("id", client_id).single().execute()
-        client_name = (client_res.data or {}).get("full_name", "A client")
+        client_res = db.table("profiles").select("full_name").eq("id", client_id).maybe_single().execute()
+        client_name = cast(dict[str, Any], (client_res.data if client_res is not None else None) or {}).get("full_name", "A client")
         template_res = (
-            db.table("treatment_plan_templates").select("name").eq("id", body["template_id"]).single().execute()
+            db.table("treatment_plan_templates").select("name").eq("id", body["template_id"]).maybe_single().execute()
             if body.get("template_id") else None
         )
         plan_name = (template_res.data or {}).get("name", "a treatment plan") if template_res else "a treatment plan"
@@ -69,7 +69,7 @@ def update_plan(plan_id: str, body: dict) -> ClientTreatmentPlan | None:
         .update(body)
         .eq("id", plan_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:
@@ -102,7 +102,7 @@ def get_template(template_id: str) -> TreatmentPlanTemplate | None:
 
 
 def create_template(body: dict) -> TreatmentPlanTemplate:
-    result = get_db().table("treatment_plan_templates").insert(body).select().single().execute()
+    result = get_db().table("treatment_plan_templates").insert(body).select().maybe_single().execute()
     return TreatmentPlanTemplate.model_validate(result.data)
 
 
@@ -112,7 +112,7 @@ def update_template(template_id: str, body: dict) -> TreatmentPlanTemplate | Non
         .update(body)
         .eq("id", template_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:

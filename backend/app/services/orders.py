@@ -44,7 +44,7 @@ def create_order(body: dict) -> dict:
         db.table("orders")
         .insert({"client_id": body["client_id"], "total_amount": total, "notes": body.get("notes")})
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     order = order_result.data
@@ -63,8 +63,8 @@ def create_order(body: dict) -> dict:
         admin.table("products").update({"stock_quantity": max(0, current - item["quantity"])}).eq("id", item["product_id"]).execute()
 
     item_count = sum(i["quantity"] for i in items)
-    client_profile = db.table("profiles").select("full_name").eq("id", body["client_id"]).single().execute()
-    client_name = (client_profile.data or {}).get("full_name", "A client")
+    client_profile = db.table("profiles").select("full_name").eq("id", body["client_id"]).maybe_single().execute()
+    client_name = cast(dict[str, Any], (client_profile.data if client_profile is not None else None) or {}).get("full_name", "A client")
 
     notify_user_and_admins(
         body["client_id"],
@@ -84,9 +84,9 @@ def create_order(body: dict) -> dict:
 
 def update_order(order_id: str, body: dict) -> Order | None:
     db = get_db()
-    _existing_res = db.table("orders").select("status, client_id").eq("id", order_id).single().execute()
-    existing: dict[str, Any] = cast(dict[str, Any], _existing_res.data or {})
-    result = db.table("orders").update(body).eq("id", order_id).select().single().execute()
+    _existing_res = db.table("orders").select("status, client_id").eq("id", order_id).maybe_single().execute()
+    existing: dict[str, Any] = cast(dict[str, Any], (_existing_res.data if _existing_res is not None else None) or {})
+    result = db.table("orders").update(body).eq("id", order_id).select().maybe_single().execute()
 
     if result is None or result.data is None:
         return None

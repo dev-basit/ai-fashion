@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
@@ -34,13 +34,13 @@ def get_record(record_id: str) -> ConsultationRecord | None:
 def create_record(body: dict) -> ConsultationRecord:
     user = get_current_user()
     db = get_db()
-    result = db.table("consultation_records").insert(body).select().single().execute()
+    result = db.table("consultation_records").insert(body).select().maybe_single().execute()
     data = result.data
     validated_data = ConsultationRecord.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
-        client_profile = db.table("profiles").select("full_name").eq("id", client_id).single().execute()
-        client_name = (client_profile.data or {}).get("full_name", "A client")
+        client_profile = db.table("profiles").select("full_name").eq("id", client_id).maybe_single().execute()
+        client_name = cast(dict[str, Any], (client_profile.data if client_profile is not None else None) or {}).get("full_name", "A client")
         notify_user_and_admins(
             client_id if client_id != user.id else None,
             {"type": "system", "title": "Consultation record created",
@@ -62,7 +62,7 @@ def update_record(record_id: str, body: dict) -> ConsultationRecord | None:
         .update(body)
         .eq("id", record_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:
@@ -95,7 +95,7 @@ def get_template(template_id: str) -> ConsultationFormTemplate | None:
 
 
 def create_template(body: dict) -> ConsultationFormTemplate:
-    result = get_db().table("consultation_form_templates").insert(body).select().single().execute()
+    result = get_db().table("consultation_form_templates").insert(body).select().maybe_single().execute()
     return ConsultationFormTemplate.model_validate(result.data)
 
 
@@ -105,7 +105,7 @@ def update_template(template_id: str, body: dict) -> ConsultationFormTemplate | 
         .update(body)
         .eq("id", template_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:

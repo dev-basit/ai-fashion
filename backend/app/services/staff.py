@@ -52,7 +52,7 @@ def create_staff(body: dict) -> StaffProfile:
         "commission_rate": body.get("commission_rate"),
         "hourly_rate": body.get("hourly_rate"),
         "is_available": True,
-    }).select().single().execute()
+    }).select().maybe_single().execute()
     return StaffProfile.model_validate(result.data)
 
 
@@ -62,7 +62,7 @@ def update_staff(staff_id: str, body: dict) -> StaffProfile | None:
         .update(body)
         .eq("id", staff_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:
@@ -102,7 +102,7 @@ def create_leave(staff_id: str, body: dict) -> StaffLeave:
         get_db().table("staff_leaves")
         .insert({**body, "staff_profile_id": staff_id})
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     return StaffLeave.model_validate(result.data)

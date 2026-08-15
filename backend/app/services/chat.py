@@ -40,7 +40,7 @@ def create_conversation(recipient_id: str) -> dict:
             if existing:
                 return {"id": existing["id"]}
 
-    _new_res = admin.table("conversations").insert({"created_by": user.id, "is_group": False}).select().single().execute()
+    _new_res = admin.table("conversations").insert({"created_by": user.id, "is_group": False}).select().maybe_single().execute()
     new_conv: dict[str, Any] = cast(dict[str, Any], _new_res.data)
     admin.table("conversation_participants").insert([
         {"conversation_id": new_conv["id"], "profile_id": user.id},
@@ -82,7 +82,7 @@ def send_message(conversation_id: str, content: str) -> Message:
         get_db().table("messages")
         .insert({"conversation_id": conversation_id, "sender_id": user.id, "content": content, "message_type": "text"})
         .select("*, profiles!sender_id(id, full_name, avatar_url)")
-        .single()
+        .maybe_single()
         .execute()
     )
     return Message.model_validate(result.data)
@@ -96,8 +96,8 @@ def mark_conversation_read(conversation_id: str) -> None:
 def list_recipients() -> list:
     user = get_current_user()
     db = get_db()
-    _profile_res = db.table("profiles").select("role").eq("id", user.id).single().execute()
-    profile: dict[str, Any] = cast(dict[str, Any], _profile_res.data or {})
+    _profile_res = db.table("profiles").select("role").eq("id", user.id).maybe_single().execute()
+    profile: dict[str, Any] = cast(dict[str, Any], (_profile_res.data if _profile_res is not None else None) or {})
     role = profile.get("role")
 
     if role == "admin":

@@ -53,7 +53,7 @@ def create_conversation() -> AiConversation:
         get_db().table("ai_conversations")
         .insert({"user_id": user.id})
         .select("id, title, created_at, updated_at")
-        .single()
+        .maybe_single()
         .execute()
     )
     

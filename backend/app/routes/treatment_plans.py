@@ -43,7 +43,7 @@ def list_plans(
 @router.post("")
 def create_plan(body: dict):
     user = get_current_user()
-    profile = get_db().table("profiles").select("role").eq("id", user.id).single().execute()
+    profile = get_db().table("profiles").select("role").eq("id", user.id).maybe_single().execute()
     profile_dict: dict[str, Any] = cast(dict[str, Any], profile.data) if profile is not None and profile.data else {}
     role: str = str(profile_dict.get("role") or "customer")
     if role == "customer":

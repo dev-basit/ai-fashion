@@ -49,7 +49,7 @@ async def ai_chat(body: dict):
     db = get_db()
     token = get_token()
 
-    profile = db.table("profiles").select("role").eq("id", user.id).single().execute()
+    profile = db.table("profiles").select("role").eq("id", user.id).maybe_single().execute()
     profile_data = profile.data if profile is not None else None
     user_role: str = str((profile_data.get("role") or "customer") if isinstance(profile_data, dict) else "customer")
 

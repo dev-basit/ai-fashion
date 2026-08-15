@@ -19,7 +19,7 @@ def update_setting(key: str, value) -> BusinessSetting | None:
         .update({"value": value, "updated_by": user.id, "updated_at": datetime.now(timezone.utc).isoformat()})
         .eq("key", key)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:

@@ -55,8 +55,9 @@ def create_appointment(body: dict) -> dict:
     from app.core.context import get_current_user
 
     user_id = get_current_user().id
-    profile = get_db().table("profiles").select("role").eq("id", user_id).single().execute()
-    role = (profile.data or {}).get("role")
+    profile = get_db().table("profiles").select("role").eq("id", user_id).maybe_single().execute()
+    profile_r: dict[str, Any] = cast(dict[str, Any], (profile.data if profile is not None else None) or {})
+    role = profile_r.get("role")
 
     client_id = user_id if role == "customer" else body.get("client_id")
     if not client_id:
@@ -66,8 +67,8 @@ def create_appointment(body: dict) -> dict:
     price = body.get("price", 0)
 
     if body.get("service_id") and not ends_at:
-        svc = get_db().table("services").select("duration_mins, base_price").eq("id", body["service_id"]).single().execute()
-        if svc.data:
+        svc = get_db().table("services").select("duration_mins, base_price").eq("id", body["service_id"]).maybe_single().execute()
+        if svc is not None and svc.data:
             start = datetime.fromisoformat(body["starts_at"])
             ends_at = (start + timedelta(minutes=svc.data.get("duration_mins") or 60)).isoformat()
             if not price:
@@ -80,17 +81,17 @@ def create_appointment(body: dict) -> dict:
         get_db().table("appointments")
         .insert({**body, "client_id": client_id, "ends_at": ends_at, "price": price})
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     apt = result.data
 
-    svc_res = get_db().table("services").select("name").eq("id", apt["service_id"]).single().execute() if apt.get("service_id") else None
-    client_res = get_db().table("profiles").select("full_name").eq("id", apt["client_id"]).single().execute()
-    staff_res = get_db().table("staff_profiles").select("profile_id").eq("id", apt["staff_profile_id"]).single().execute() if apt.get("staff_profile_id") else None
+    svc_res = get_db().table("services").select("name").eq("id", apt["service_id"]).maybe_single().execute() if apt.get("service_id") else None
+    client_res = get_db().table("profiles").select("full_name").eq("id", apt["client_id"]).maybe_single().execute()
+    staff_res = get_db().table("staff_profiles").select("profile_id").eq("id", apt["staff_profile_id"]).maybe_single().execute() if apt.get("staff_profile_id") else None
 
     service_name = (svc_res.data or {}).get("name", "appointment") if svc_res else "appointment"
-    client_name = (client_res.data or {}).get("full_name", "A client")
+    client_name = cast(dict[str, Any], (client_res.data if client_res is not None else None) or {}).get("full_name", "A client")
     staff_profile_id = (staff_res.data or {}).get("profile_id") if staff_res else None
 
     notify_user_and_admins(
@@ -110,7 +111,7 @@ def update_appointment(appointment_id: str, body: dict) -> dict | None:
         .update(body)
         .eq("id", appointment_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     return result.data
@@ -170,7 +171,7 @@ def add_appointment_product(appointment_id: str, body: dict) -> dict:
         get_db().table("appointment_products")
         .insert({**body, "appointment_id": appointment_id})
         .select("*, products(name)")
-        .single()
+        .maybe_single()
         .execute()
     )
     return result.data

@@ -11,10 +11,10 @@ def get_me() -> dict:
         get_db().table("profiles")
         .select("id, full_name, phone, role, avatar_url, date_of_birth, created_at")
         .eq("id", user.id)
-        .single()
+        .maybe_single()
         .execute()
     )
-    profile_data: dict[str, Any] = cast(dict[str, Any], result.data or {})
+    profile_data: dict[str, Any] = cast(dict[str, Any], (result.data if result is not None else None) or {})
     return {**profile_data, "email": user.email}
 
 
@@ -48,7 +48,7 @@ def update_profile(profile_id: str, body: dict) -> Profile | None:
         .update(body)
         .eq("id", profile_id)
         .select()
-        .single()
+        .maybe_single()
         .execute()
     )
     if result is None or result.data is None:

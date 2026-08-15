@@ -25,7 +25,7 @@ def get_profile(profile_id: str):
 def update_profile(profile_id: str, body: dict):
     user = get_current_user()
     if profile_id != user.id:
-        me = get_db().table("profiles").select("role").eq("id", user.id).single().execute()
+        me = get_db().table("profiles").select("role").eq("id", user.id).maybe_single().execute()
         me_data: dict[str, Any] = cast(dict[str, Any], me.data) if me is not None and me.data else {}
         if not me_data or me_data.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Forbidden")
