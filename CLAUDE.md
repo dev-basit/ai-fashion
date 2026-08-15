@@ -83,11 +83,11 @@ supabase db reset         # DESTRUCTIVE — wipes all data, always ask user firs
 
 | Layer     | Library                      | Notes                                                       |
 | --------- | ---------------------------- | ----------------------------------------------------------- |
-| Framework | FastAPI + uvicorn            | Port 8000                                                   |
-| Language  | Python 3.14                  |                                                             |
-| Database  | supabase-py ^2               | `get_admin_client()` (singleton) + `get_user_client(token)` |
-| AI / LLM  | langchain-openai + langgraph | RAG + streaming agent with tool use                         |
-| Config    | pydantic-settings            | `app/config/settings.py` — reads from `backend/.env`        |
+| Framework | FastAPI + uvicorn            | Port 8000                                                         |
+| Language  | Python 3.14                  |                                                                   |
+| Database  | supabase-py ^2               | `get_admin_db_client()` (singleton) + `get_db_client(token)`      |
+| AI / LLM  | langchain-openai + langgraph | RAG + streaming agent with tool use                               |
+| Config    | pydantic-settings            | `app/config/config.py` — class `Config`, instance `config`        |
 
 ---
 
@@ -164,17 +164,17 @@ backend/
     config.toml          # Supabase local development config
   app/
     config/
-      settings.py        # Pydantic Settings — all env vars
-      enums.py
+      config.py          # Pydantic Config — all env vars (class Config, instance `config`)
     core/
-      supabase.py        # get_admin_client() (lru_cache singleton) + get_user_client(token)
-      auth.py            # AuthContext, get_auth, get_admin_auth (FastAPI Depends)
+      supabase.py        # get_admin_db_client() (lru_cache singleton) + get_db_client(token)
+      context.py         # ContextVars: _db_var, _user_var, _token_var + get_db(), get_current_user(), get_token()
+      auth.py            # require_admin(), get_admin_auth() — reads from context vars
       notify.py          # notify_user_and_admins(), notify_admins()
     routes/              # Thin controllers — parse params, call service, return {"data": ...}
       health.py, me.py, profiles.py, appointments.py, clients.py
       products.py, salon_services.py, staff.py, orders.py, chat.py
       consultation.py, treatment_plans.py, notifications.py, settings.py, reports.py, ai.py
-    services/            # Business logic + Supabase queries
+    services/            # Business logic + Supabase queries (call get_db() from context)
       appointments.py, clients.py, products.py, salon_services.py, staff.py
       orders.py, chat.py, consultation.py, treatment_plans.py
       notifications.py, settings.py, reports.py, profiles.py, ai_service.py
@@ -184,9 +184,9 @@ backend/
       rag.py             # retrieve node (cosine similarity search)
       agent.py           # agent node + route_agent
       graph.py           # Compiled StateGraph: agent → retrieve/tools → agent → END
-      tools/             # Role-scoped tools (appointments, clients, orders, etc.)
-        utils.py         # get_supabase(config), get_user_id(config) — shared helpers
-    schemas/             # Pydantic request/response models
+      tools/             # Role-scoped tools grouped by domain + __init__.py (get_role_tools)
+        utils.py         # get_user_id(config) — shared helper
+    schemas/             # Pydantic request/response models (one file per domain)
     utils/
       product_svgs.py    # PRODUCT_SVGS dictionary — 15 product icons as SVG strings
       seed_data.py       # Seed data: SERVICE_CATEGORIES, SERVICES, PRODUCTS, CONSULTATION_TEMPLATES, TREATMENT_PLAN_TEMPLATES, BUSINESS_SETTINGS()
@@ -223,24 +223,40 @@ backend/
 
 ### Supabase Clients (Backend)
 
-| Client                     | When to use                                                                 |
-| -------------------------- | --------------------------------------------------------------------------- |
-| `auth.supabase` (injected) | Route handlers receive this from `get_auth` — RLS-scoped to the JWT user    |
-| `get_admin_client()`       | Bypass RLS: user creation, notifications, stock decrement, privileged reads |
-| `get_user_client(token)`   | AI tools — builds per-request JWT-scoped client from `config.configurable`  |
+Auth is handled by HTTP middleware in `main.py` — it validates the JWT and sets context variables for the lifetime of each request. Route handlers and services never take auth as a parameter.
+
+| Client                                    | When to use                                                                 |
+| ----------------------------------------- | --------------------------------------------------------------------------- |
+| `get_db()` (from `app.core.context`)      | In services — RLS-scoped client, set by middleware for the current request  |
+| `get_admin_db_client()` (from `supabase`) | Bypass RLS: user creation, notifications, stock decrement, privileged reads |
+
+`get_current_user()` and `get_token()` (also from `app.core.context`) give the authenticated user and raw JWT within a request.
 
 ### Backend Route Pattern
 
 ```python
 @router.get("")
-def list_things(auth: AuthContext = Depends(get_auth)):
-    data = things_svc.list_things(auth.supabase)
+def list_things():
+    data = things_svc.list_things()
     return {"data": data}
 
 @router.post("")
-def create_thing(body: dict, auth: AuthContext = Depends(get_auth)):
-    data = things_svc.create_thing(auth.supabase, auth.user.id, body)
+def create_thing(body: dict):
+    data = things_svc.create_thing(body)
     return {"data": data}
+```
+
+Services call `get_db()` directly — no supabase client argument needed:
+
+```python
+from app.core.context import get_db, get_current_user
+
+def list_things() -> list:
+    return get_db().table("things").select("*").execute().data or []
+
+def create_thing(body: dict) -> dict:
+    user = get_current_user()
+    return get_db().table("things").insert({**body, "user_id": user.id}).execute().data[0]
 ```
 
 - Always return `{"data": ...}` on success; raise `HTTPException` for errors.
@@ -350,11 +366,11 @@ Component
       → service function (src/services/*.service.ts)
           → http.ts (axios, baseURL: NEXT_PUBLIC_BACKEND_URL, Bearer JWT injected)
               → FastAPI route handler (backend/app/routes/...)
-                  → get_auth / get_admin_auth (resolves user, builds RLS-scoped supabase client)
+                  → auth_middleware (main.py) validates JWT, sets _db_var/_user_var/_token_var
                       → service layer (backend/app/services/...)
-                          → supabase query (RLS enforced)
+                          → get_db() — RLS-scoped supabase client from context
                               ─ OR ─
-                          → get_admin_client() for privileged ops
+                          → get_admin_db_client() for privileged ops
 ```
 
 ### Auth state (not server-side)
@@ -574,7 +590,7 @@ notify_admins({"type": "order", "title": "...", "body": "..."})
 
 Clients and staff are created by admin only — no self-registration:
 
-- **Clients**: `POST /clients` on FastAPI — `get_admin_client().auth.admin.create_user()`
+- **Clients**: `POST /clients` on FastAPI — `get_admin_db_client().auth.admin.create_user()`
 - **Staff**: `POST /staff` — same pattern + `staff_profiles` row
 
 `ClientForm` and `StaffForm` handle both create (email/password fields) and edit modes.
@@ -583,7 +599,7 @@ Clients and staff are created by admin only — no self-registration:
 
 ## Chat
 
-- Conversations created via `POST /chat/conversations` using `get_admin_client()` — bypasses RLS to allow customers to start conversations.
+- Conversations created via `POST /chat/conversations` using `get_admin_db_client()` — bypasses RLS to allow customers to start conversations.
 - **RLS recursion fix** (migration 0005): `is_conversation_member()` is `SECURITY DEFINER` — avoids `42P17` infinite recursion.
 - `useConversations()` exposes `refetch()` (calls `invalidateQueries`) — call after creating a new conversation.
 - `useCreateConversation()` in `useChat.ts` wraps `chatService.getOrCreateDirectConversation`.
@@ -592,7 +608,7 @@ Clients and staff are created by admin only — no self-registration:
 
 ## Products / Orders
 
-- **Stock decrement** happens server-side in `POST /orders` via `get_admin_client()`.
+- **Stock decrement** happens server-side in `POST /orders` via `get_admin_db_client()`.
 - **Staff**: browse-only. Cannot add to cart or place orders.
 - `Checkout.tsx` uses `useCreateOrder()` hook — not a direct service call.
 
@@ -606,12 +622,12 @@ The `/dashboard/ai-assistant` page provides a role-aware RAG + tool-calling chat
 
 ```
 POST /ai/chat
-  → get_auth (session check)
+  → auth_middleware sets context vars (JWT already validated)
   → rate limit check (ai_usage table, AI_DAILY_LIMIT per day)
-  → graph.astream({ messages, user_role, context: "" }, config={access_token, user_id, timezone})
+  → graph.astream({ messages, user_role, context: "" }, config={user_id, timezone})
       agent node: bind role-scoped tools → invoke LLM
       retrieve node: embed query → cosine search → build context string
-      tools node: ToolNode executes tool calls (each tool builds JWT-scoped supabase client)
+      tools node: ToolNode executes tool calls (each calls service functions via get_db())
   → StreamingResponse back to client (text/plain chunks)
 ```
 
@@ -627,19 +643,25 @@ POST /ai/chat
 **AI tool pattern** (`backend/app/ai/tools/`):
 
 ```python
-from app.ai.tools.utils import get_supabase, get_user_id
+import json
+from typing import Annotated, Optional
+from langchain_core.tools import tool
+from app.config.config import config
+from app.services import appointments as appts_svc
 
 @tool
 def get_my_appointments(
     status: Annotated[Optional[str], "Filter by status"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
+    limit: Annotated[int, "Max results to return"] = config.page_limit,
 ) -> str:
     """List the current user's own appointments."""
-    data = appointments_svc.list_appointments(get_supabase(config), status=status)
-    return json.dumps(data, indent=2) if data else "No appointments."
+    data = appts_svc.list_appointments(status=status)
+    return json.dumps(data[:limit], indent=2) if data else "No appointments."
 ```
 
-`InjectedToolArg` hides `config` from the LLM schema. Tools call service functions directly — no HTTP round-trip.
+Tools call service functions directly — no HTTP round-trip. The RLS-scoped `get_db()` client is already set in context by the middleware for the duration of the `/ai/chat` request.
+
+**Tool grouping** — `tools/__init__.py` exports `get_role_tools(user_role)` which returns the appropriate tool list (`customer_tools`, `staff_tools`, or `admin_tools`). Each domain file exports named lists (e.g., `customer_appointment_tools`, `admin_appointment_tools`).
 
 **Key files**:
 
@@ -680,7 +702,7 @@ def get_my_appointments(
 - **No inline types/constants/utilities in components**: All shared definitions live in centralized locations — see "Shared Constants, Types & Utilities" section above.
 - **Services are thin HTTP clients**: `*.service.ts` call FastAPI via `http.ts`. They do not touch Supabase.
 - **Backend uses sync `def` for Supabase routes**: FastAPI runs sync handlers in a thread pool — no blocking.
-- **`get_admin_client()` only for bypass**: use in backend services only when explicitly skipping RLS.
+- **`get_admin_db_client()` only for bypass**: use in backend services only when explicitly skipping RLS (user creation, notifications, stock decrement).
 - **Cache invalidation is automatic**: `onSuccess` → `qc.invalidateQueries(...)` triggers refetch. Components don't call `refetch()` manually.
 - **npm install**: always `npm install --legacy-peer-deps --cache /tmp/npm-cache-glow`.
 - **Supabase Realtime** for chat (`src/hooks/useRealtime.ts`). No custom WebSocket server.

@@ -200,7 +200,7 @@ python -m scripts.ingest_kb
 
 ```
 backend/
-├── main.py                  # FastAPI app, CORS, router registration
+├── main.py                  # FastAPI app, CORS, auth middleware, router registration
 ├── requirements.txt         # Python dependencies
 ├── knowledge-base.md        # AI knowledge base (edit here, then ingest)
 ├── .env                     # Secrets (gitignored)
@@ -212,11 +212,11 @@ backend/
 │
 └── app/
     ├── config/
-    │   ├── settings.py      # Pydantic Settings (env vars)
-    │   └── enums.py         # Enums (roles, statuses, etc.)
+    │   └── config.py        # Pydantic Config (class Config, instance `config`)
     ├── core/
-    │   ├── supabase.py      # get_admin_client(), get_user_client()
-    │   ├── auth.py          # AuthContext, get_auth, get_admin_auth
+    │   ├── supabase.py      # get_admin_db_client(), get_db_client(token)
+    │   ├── context.py       # ContextVars: get_db(), get_current_user(), get_token()
+    │   ├── auth.py          # require_admin(), get_admin_auth()
     │   └── notify.py        # notify_user_and_admins(), notify_admins()
     ├── routes/              # Thin controllers (parse, call service, return)
     │   ├── health.py
@@ -226,7 +226,7 @@ backend/
     │   ├── consultation.py, treatment_plans.py
     │   ├── notifications.py, settings.py, reports.py, ai.py
     │   └── chat.py
-    ├── services/            # Business logic + Supabase queries
+    ├── services/            # Business logic + Supabase queries (use get_db() from context)
     │   ├── appointments.py, clients.py, products.py
     │   ├── salon_services.py, staff.py, orders.py
     │   ├── consultation.py, treatment_plans.py
@@ -240,8 +240,9 @@ backend/
     │   ├── agent.py         # agent node + conditional routing
     │   ├── graph.py         # Compiled StateGraph
     │   └── tools/           # Role-scoped tool implementations
-    │       └── utils.py     # get_supabase(), get_user_id()
-    ├── schemas/             # Pydantic request/response models
+    │       ├── __init__.py  # get_role_tools(), customer/staff/admin tool lists
+    │       └── utils.py     # get_user_id(config)
+    ├── schemas/             # Pydantic request/response models (one file per domain)
     └── utils/
         ├── product_svgs.py  # PRODUCT_SVGS (15 product icons)
         └── seed_data.py     # Seed data (services, products, templates, etc.)
@@ -308,12 +309,12 @@ Navigate to http://localhost:8000/docs for interactive Swagger UI.
 ```
 Frontend (Next.js)
     ↓ axios + Bearer JWT
+auth_middleware (main.py)
+    ↓ validates JWT, sets get_db() / get_current_user() / get_token() in context vars
 API Routes (FastAPI)
-    ↓ get_auth() — resolve user from JWT
-Thin Controllers
-    ↓ call services, parse params
+    ↓ parse params, call services (no auth params needed)
 Business Logic (Services)
-    ↓ use Supabase client (RLS-scoped or admin)
+    ↓ get_db() — RLS-scoped client from context
 Supabase (PostgreSQL + RLS)
     ↓ enforce row-level security
 Database
@@ -321,19 +322,19 @@ Database
 
 ### Key Patterns
 
+- **Auth via middleware** — `auth_middleware` in `main.py` validates the JWT and sets context variables (`_db_var`, `_user_var`, `_token_var`) for the request lifetime. Routes need no auth parameters.
 - **Sync handlers** (`def`, not `async def`) for Supabase CRUD — FastAPI runs them in a thread pool
-- **RLS-scoped clients** (per JWT token) for user data — all routes receive `AuthContext` from `get_auth()`
-- **Admin clients** (`get_admin_client()`) only for bypass operations (user creation, stock decrement, notifications)
+- **RLS-scoped client via context** — services call `get_db()` from `app.core.context` (no argument needed)
+- **Admin client** (`get_admin_db_client()`) only for bypass operations (user creation, stock decrement, notifications)
 - **Streaming responses** (`StreamingResponse`) only for AI chat (`/ai/chat`)
 - **Route declaration order matters** — static paths (`/stats`, `/templates`) must come before `/{id}`
 
 ### Supabase Clients
 
-| Client                   | When to Use                                           |
-| ------------------------ | ----------------------------------------------------- |
-| `auth.supabase`          | Injected into routes — RLS-scoped to the JWT user     |
-| `get_admin_client()`     | Bypass RLS: user creation, notifications, privileged  |
-| `get_user_client(token)` | AI tools — builds JWT-scoped client from access token |
+| Client                                   | When to Use                                                  |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `get_db()` (from `app.core.context`)     | In services — RLS-scoped client set by middleware per request |
+| `get_admin_db_client()` (from supabase)  | Bypass RLS: user creation, notifications, privileged ops     |
 
 ---
 
@@ -343,12 +344,12 @@ Database
 
 ```
 POST /ai/chat
-  ↓ get_auth() — validate session
+  ↓ auth_middleware — JWT validated, context vars set
   ↓ Rate limit check (ai_usage table)
   ↓ graph.astream() — invoke LangGraph
       ├── agent node — bind role-scoped tools, call LLM
       ├── retrieve node — embed query, cosine search, build context
-      ├── tools node — execute tool calls (each builds JWT-scoped client)
+      ├── tools node — execute tool calls (each calls service via get_db())
       └── loop until END
   ↓ StreamingResponse — yield chunks back to client
 ```
