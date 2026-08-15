@@ -3,6 +3,7 @@ from typing import Optional
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
 from app.core.supabase import get_admin_client
+from app.schemas.orders import Order
 
 
 def list_orders(client_id: Optional[str] = None) -> list:
@@ -21,7 +22,7 @@ def list_orders(client_id: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def get_order(order_id: str) -> dict | None:
+def get_order(order_id: str) -> Order | None:
     result = (
         get_db().table("orders")
         .select("*, profiles!client_id(id, full_name, phone), order_items(*, products(*))")
@@ -29,7 +30,9 @@ def get_order(order_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Order.model_validate(result.data)
 
 
 def create_order(body: dict) -> dict:
@@ -78,12 +81,15 @@ def create_order(body: dict) -> dict:
     return order
 
 
-def update_order(order_id: str, body: dict) -> dict | None:
+def update_order(order_id: str, body: dict) -> Order | None:
     db = get_db()
     existing = db.table("orders").select("status, client_id").eq("id", order_id).single().execute().data or {}
     result = db.table("orders").update(body).eq("id", order_id).select().single().execute()
-    data = result.data
 
+    if result is None or result.data is None:
+        return None
+
+    data = result.data
     if body.get("status") == "delivered" and existing.get("status") != "delivered" and existing.get("client_id"):
         notify_user_and_admins(
             existing["client_id"],
@@ -92,4 +98,4 @@ def update_order(order_id: str, body: dict) -> dict | None:
              "data": {"order_id": order_id}},
         )
 
-    return data
+    return Order.model_validate(data)

@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db
 from app.core.supabase import get_admin_client
+from app.schemas.staff import StaffProfile, StaffDetail, StaffLeave
 
 
 def list_staff(profile_id: Optional[str] = None) -> list:
@@ -15,7 +16,7 @@ def list_staff(profile_id: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def get_staff(staff_id: str) -> dict | None:
+def get_staff(staff_id: str) -> StaffDetail | None:
     result = (
         get_db().table("staff_profiles")
         .select("*, profiles(*), staff_services(services(*))")
@@ -23,10 +24,12 @@ def get_staff(staff_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return StaffDetail.model_validate(result.data)
 
 
-def create_staff(body: dict) -> dict:
+def create_staff(body: dict) -> StaffProfile:
     admin = get_admin_client()
     email = body["email"]
     password = body["password"]
@@ -50,10 +53,10 @@ def create_staff(body: dict) -> dict:
         "hourly_rate": body.get("hourly_rate"),
         "is_available": True,
     }).select().single().execute()
-    return result.data
+    return StaffProfile.model_validate(result.data)
 
 
-def update_staff(staff_id: str, body: dict) -> dict | None:
+def update_staff(staff_id: str, body: dict) -> StaffProfile | None:
     result = (
         get_db().table("staff_profiles")
         .update(body)
@@ -62,7 +65,9 @@ def update_staff(staff_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return StaffProfile.model_validate(result.data)
 
 
 def get_schedule(staff_id: str) -> list:
@@ -92,7 +97,7 @@ def get_leaves(staff_id: str) -> list:
     return result.data or []
 
 
-def create_leave(staff_id: str, body: dict) -> dict:
+def create_leave(staff_id: str, body: dict) -> StaffLeave:
     result = (
         get_db().table("staff_leaves")
         .insert({**body, "staff_profile_id": staff_id})
@@ -100,7 +105,7 @@ def create_leave(staff_id: str, body: dict) -> dict:
         .single()
         .execute()
     )
-    return result.data
+    return StaffLeave.model_validate(result.data)
 
 
 def delete_leave(staff_id: str, leave_id: str) -> None:

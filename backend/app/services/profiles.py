@@ -1,5 +1,6 @@
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_client
+from app.schemas.profiles import Profile
 
 
 def get_me() -> dict:
@@ -25,7 +26,7 @@ def list_profiles() -> list:
     return result.data or []
 
 
-def get_profile(profile_id: str) -> dict | None:
+def get_profile(profile_id: str) -> Profile | None:
     result = (
         get_db().table("profiles")
         .select("*")
@@ -33,10 +34,12 @@ def get_profile(profile_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Profile.model_validate(result.data)
 
 
-def update_profile(profile_id: str, body: dict) -> dict | None:
+def update_profile(profile_id: str, body: dict) -> Profile | None:
     result = (
         get_db().table("profiles")
         .update(body)
@@ -45,4 +48,6 @@ def update_profile(profile_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Profile.model_validate(result.data)

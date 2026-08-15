@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from app.core.context import get_db, get_current_user
+from app.schemas.settings import BusinessSetting
 
 
 def get_settings(key: Optional[str] = None) -> list:
@@ -11,7 +12,7 @@ def get_settings(key: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def update_setting(key: str, value) -> dict | None:
+def update_setting(key: str, value) -> BusinessSetting | None:
     user = get_current_user()
     result = (
         get_db().table("business_settings")
@@ -21,4 +22,6 @@ def update_setting(key: str, value) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return BusinessSetting.model_validate(result.data)

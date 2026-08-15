@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db
 from app.core.supabase import get_admin_client
+from app.schemas.products import Product, ProductCategory
 
 
 def list_products(search: Optional[str] = None, category_id: Optional[str] = None) -> list:
@@ -18,7 +19,7 @@ def list_products(search: Optional[str] = None, category_id: Optional[str] = Non
     return query.execute().data or []
 
 
-def get_product(product_id: str) -> dict | None:
+def get_product(product_id: str) -> Product | None:
     result = (
         get_db().table("products")
         .select("*, product_categories(*)")
@@ -26,15 +27,17 @@ def get_product(product_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Product.model_validate(result.data)
 
 
-def create_product(body: dict) -> dict:
+def create_product(body: dict) -> Product:
     result = get_db().table("products").insert(body).select().single().execute()
-    return result.data
+    return Product.model_validate(result.data)
 
 
-def update_product(product_id: str, body: dict) -> dict | None:
+def update_product(product_id: str, body: dict) -> Product | None:
     result = (
         get_db().table("products")
         .update(body)
@@ -43,7 +46,9 @@ def update_product(product_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Product.model_validate(result.data)
 
 
 def delete_product(product_id: str) -> None:
@@ -61,9 +66,9 @@ def list_product_categories() -> list:
     return result.data or []
 
 
-def create_product_category(body: dict) -> dict:
+def create_product_category(body: dict) -> ProductCategory:
     result = get_db().table("product_categories").insert(body).select().single().execute()
-    return result.data
+    return ProductCategory.model_validate(result.data)
 
 
 def get_low_stock_products() -> list:

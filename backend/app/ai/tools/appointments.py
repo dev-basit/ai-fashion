@@ -13,7 +13,6 @@ from app.services import appointments as appts_svc
 def get_my_appointments(
     status: Annotated[Optional[str], "Filter by status: pending | confirmed | in_progress | completed | cancelled | no_show"] = None,
     limit: Annotated[int, "Max results to return"] = settings.page_limit,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List the current user's own appointments. Optionally filter by status."""
     data = appts_svc.list_appointments(status=status)

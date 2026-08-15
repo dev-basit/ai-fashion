@@ -4,6 +4,7 @@ from typing import Optional
 from app.core.context import get_db
 from app.core.notify import notify_admins, notify_user_and_admins
 from app.core.supabase import get_admin_client
+from app.schemas.appointments import AppointmentDetail
 
 
 def list_appointments(
@@ -34,7 +35,7 @@ def list_appointments(
     return query.execute().data or []
 
 
-def get_appointment(appointment_id: str) -> dict | None:
+def get_appointment(appointment_id: str) -> AppointmentDetail | None:
     result = (
         get_db().table("appointments")
         .select("*, services(*), profiles!client_id(*), staff_profiles(*, profiles(*))")
@@ -42,10 +43,15 @@ def get_appointment(appointment_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+
+    if result is None or result.data is None:
+        return None
+
+    return AppointmentDetail.model_validate(result.data)
 
 
 def create_appointment(body: dict) -> dict:
+    
     from app.core.context import get_current_user
 
     user_id = get_current_user().id

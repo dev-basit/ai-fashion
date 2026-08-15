@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
+from app.schemas.treatment_plans import ClientTreatmentPlan, TreatmentPlanTemplate
 
 
 def list_plans(client_id: Optional[str] = None) -> list:
@@ -19,7 +20,7 @@ def list_plans(client_id: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def get_plan(plan_id: str) -> dict | None:
+def get_plan(plan_id: str) -> ClientTreatmentPlan | None:
     result = (
         get_db().table("client_treatment_plans")
         .select("*, profiles!client_id(*), treatment_plan_templates(*)")
@@ -27,13 +28,16 @@ def get_plan(plan_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ClientTreatmentPlan.model_validate(result.data)
 
 
-def create_plan(body: dict) -> dict:
+def create_plan(body: dict) -> ClientTreatmentPlan:
     db = get_db()
     result = db.table("client_treatment_plans").insert(body).select().single().execute()
     data = result.data
+    validated_data = ClientTreatmentPlan.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
         client_res = db.table("profiles").select("full_name").eq("id", client_id).single().execute()
@@ -56,10 +60,10 @@ def create_plan(body: dict) -> dict:
              "body": f"{plan_name} was assigned to {client_name}.",
              "data": {"plan_id": data["id"]}},
         )
-    return data
+    return validated_data
 
 
-def update_plan(plan_id: str, body: dict) -> dict | None:
+def update_plan(plan_id: str, body: dict) -> ClientTreatmentPlan | None:
     result = (
         get_db().table("client_treatment_plans")
         .update(body)
@@ -68,7 +72,9 @@ def update_plan(plan_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ClientTreatmentPlan.model_validate(result.data)
 
 
 def list_templates() -> list:
@@ -82,7 +88,7 @@ def list_templates() -> list:
     return result.data or []
 
 
-def get_template(template_id: str) -> dict | None:
+def get_template(template_id: str) -> TreatmentPlanTemplate | None:
     result = (
         get_db().table("treatment_plan_templates")
         .select("*")
@@ -90,15 +96,17 @@ def get_template(template_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return TreatmentPlanTemplate.model_validate(result.data)
 
 
-def create_template(body: dict) -> dict:
+def create_template(body: dict) -> TreatmentPlanTemplate:
     result = get_db().table("treatment_plan_templates").insert(body).select().single().execute()
-    return result.data
+    return TreatmentPlanTemplate.model_validate(result.data)
 
 
-def update_template(template_id: str, body: dict) -> dict | None:
+def update_template(template_id: str, body: dict) -> TreatmentPlanTemplate | None:
     result = (
         get_db().table("treatment_plan_templates")
         .update(body)
@@ -107,4 +115,6 @@ def update_template(template_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return TreatmentPlanTemplate.model_validate(result.data)

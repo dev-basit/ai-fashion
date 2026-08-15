@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
+from app.schemas.consultation import ConsultationRecord, ConsultationFormTemplate
 
 
 def list_records(client_id: Optional[str] = None, staff_profile_id: Optional[str] = None) -> list:
@@ -17,7 +18,7 @@ def list_records(client_id: Optional[str] = None, staff_profile_id: Optional[str
     return query.execute().data or []
 
 
-def get_record(record_id: str) -> dict | None:
+def get_record(record_id: str) -> ConsultationRecord | None:
     result = (
         get_db().table("consultation_records")
         .select("*, profiles!client_id(*), staff_profiles(*, profiles(*)), consultation_form_templates(*)")
@@ -25,14 +26,17 @@ def get_record(record_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ConsultationRecord.model_validate(result.data)
 
 
-def create_record(body: dict) -> dict:
+def create_record(body: dict) -> ConsultationRecord:
     user = get_current_user()
     db = get_db()
     result = db.table("consultation_records").insert(body).select().single().execute()
     data = result.data
+    validated_data = ConsultationRecord.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
         client_profile = db.table("profiles").select("full_name").eq("id", client_id).single().execute()
@@ -49,10 +53,10 @@ def create_record(body: dict) -> dict:
              "body": f"A consultation record was created for {client_name}.",
              "data": {"record_id": data["id"]}},
         )
-    return data
+    return validated_data
 
 
-def update_record(record_id: str, body: dict) -> dict | None:
+def update_record(record_id: str, body: dict) -> ConsultationRecord | None:
     result = (
         get_db().table("consultation_records")
         .update(body)
@@ -61,7 +65,9 @@ def update_record(record_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ConsultationRecord.model_validate(result.data)
 
 
 def list_templates() -> list:
@@ -75,7 +81,7 @@ def list_templates() -> list:
     return result.data or []
 
 
-def get_template(template_id: str) -> dict | None:
+def get_template(template_id: str) -> ConsultationFormTemplate | None:
     result = (
         get_db().table("consultation_form_templates")
         .select("*")
@@ -83,15 +89,17 @@ def get_template(template_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ConsultationFormTemplate.model_validate(result.data)
 
 
-def create_template(body: dict) -> dict:
+def create_template(body: dict) -> ConsultationFormTemplate:
     result = get_db().table("consultation_form_templates").insert(body).select().single().execute()
-    return result.data
+    return ConsultationFormTemplate.model_validate(result.data)
 
 
-def update_template(template_id: str, body: dict) -> dict | None:
+def update_template(template_id: str, body: dict) -> ConsultationFormTemplate | None:
     result = (
         get_db().table("consultation_form_templates")
         .update(body)
@@ -100,4 +108,6 @@ def update_template(template_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ConsultationFormTemplate.model_validate(result.data)

@@ -1,4 +1,5 @@
 from app.core.context import get_db
+from app.schemas.salon_services import Service, ServiceCategory, ServiceVariant
 
 
 def list_services() -> list:
@@ -12,7 +13,7 @@ def list_services() -> list:
     return result.data or []
 
 
-def get_service(service_id: str) -> dict | None:
+def get_service(service_id: str) -> Service | None:
     result = (
         get_db().table("services")
         .select("*, service_categories(*), service_variants(*)")
@@ -20,15 +21,17 @@ def get_service(service_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Service.model_validate(result.data)
 
 
-def create_service(body: dict) -> dict:
+def create_service(body: dict) -> Service:
     result = get_db().table("services").insert(body).select().single().execute()
-    return result.data
+    return Service.model_validate(result.data)
 
 
-def update_service(service_id: str, body: dict) -> dict | None:
+def update_service(service_id: str, body: dict) -> Service | None:
     result = (
         get_db().table("services")
         .update(body)
@@ -37,7 +40,9 @@ def update_service(service_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Service.model_validate(result.data)
 
 
 def delete_service(service_id: str) -> None:
@@ -55,12 +60,12 @@ def list_categories() -> list:
     return result.data or []
 
 
-def create_category(body: dict) -> dict:
+def create_category(body: dict) -> ServiceCategory:
     result = get_db().table("service_categories").insert(body).select().single().execute()
-    return result.data
+    return ServiceCategory.model_validate(result.data)
 
 
-def get_category(category_id: str) -> dict | None:
+def get_category(category_id: str) -> ServiceCategory | None:
     result = (
         get_db().table("service_categories")
         .select("*")
@@ -68,10 +73,12 @@ def get_category(category_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ServiceCategory.model_validate(result.data)
 
 
-def update_category(category_id: str, body: dict) -> dict | None:
+def update_category(category_id: str, body: dict) -> ServiceCategory | None:
     result = (
         get_db().table("service_categories")
         .update(body)
@@ -80,7 +87,9 @@ def update_category(category_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ServiceCategory.model_validate(result.data)
 
 
 def delete_category(category_id: str) -> None:
@@ -98,7 +107,7 @@ def list_variants(service_id: str) -> list:
     return result.data or []
 
 
-def create_variant(service_id: str, body: dict) -> dict:
+def create_variant(service_id: str, body: dict) -> ServiceVariant:
     result = (
         get_db().table("service_variants")
         .insert({**body, "service_id": service_id})
@@ -106,10 +115,10 @@ def create_variant(service_id: str, body: dict) -> dict:
         .single()
         .execute()
     )
-    return result.data
+    return ServiceVariant.model_validate(result.data)
 
 
-def update_variant(variant_id: str, body: dict) -> dict | None:
+def update_variant(variant_id: str, body: dict) -> ServiceVariant | None:
     result = (
         get_db().table("service_variants")
         .update(body)
@@ -118,7 +127,9 @@ def update_variant(variant_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return ServiceVariant.model_validate(result.data)
 
 
 def delete_variant(variant_id: str) -> None:

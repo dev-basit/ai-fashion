@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_client
+from app.schemas.chat import Message
 
 
 def list_conversations() -> list:
@@ -69,7 +70,7 @@ def list_messages(conversation_id: str, limit: int = 50) -> list:
     return result.data or []
 
 
-def send_message(conversation_id: str, content: str) -> dict:
+def send_message(conversation_id: str, content: str) -> Message:
     user = get_current_user()
     result = (
         get_db().table("messages")
@@ -78,7 +79,7 @@ def send_message(conversation_id: str, content: str) -> dict:
         .single()
         .execute()
     )
-    return result.data
+    return Message.model_validate(result.data)
 
 
 def mark_conversation_read(conversation_id: str) -> None:

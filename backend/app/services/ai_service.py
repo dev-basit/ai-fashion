@@ -1,6 +1,7 @@
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_client
 from app.config.settings import settings
+from app.schemas.ai import AiConversation, AiMessage
 
 
 def check_rate_limit(user_id: str, today: str) -> tuple[int, bool]:
@@ -30,7 +31,7 @@ def list_conversations() -> list:
     return result.data or []
 
 
-def get_conversation(conversation_id: str) -> dict | None:
+def get_conversation(conversation_id: str) -> AiConversation | None:
     result = (
         get_db().table("ai_conversations")
         .select("id, title, created_at, updated_at")
@@ -38,10 +39,12 @@ def get_conversation(conversation_id: str) -> dict | None:
         .maybe_single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return AiConversation.model_validate(result.data)
 
 
-def create_conversation() -> dict:
+def create_conversation() -> AiConversation:
     user = get_current_user()
     result = (
         get_db().table("ai_conversations")
@@ -50,7 +53,7 @@ def create_conversation() -> dict:
         .single()
         .execute()
     )
-    return result.data
+    return AiConversation.model_validate(result.data)
 
 
 def delete_conversation(conversation_id: str) -> int:

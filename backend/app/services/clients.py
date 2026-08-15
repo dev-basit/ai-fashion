@@ -2,6 +2,7 @@ from typing import Optional
 
 from app.core.context import get_db
 from app.core.supabase import get_admin_client
+from app.schemas.profiles import Profile
 
 
 def list_clients(search: Optional[str] = None) -> list:
@@ -18,13 +19,15 @@ def list_clients(search: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def get_client(client_id: str) -> dict | None:
+def get_client(client_id: str) -> Profile | None:
     admin = get_admin_client()
     result = admin.table("profiles").select("*").eq("id", client_id).maybe_single().execute()
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Profile.model_validate(result.data)
 
 
-def create_client(body: dict) -> dict:
+def create_client(body: dict) -> Profile:
     admin = get_admin_client()
     email = body["email"]
     password = body["password"]
@@ -42,10 +45,10 @@ def create_client(body: dict) -> dict:
         {"id": profile_id, "role": "customer", "full_name": full_name, "phone": phone,
          "date_of_birth": date_of_birth, "notes": notes, "is_active": True}
     ).select().single().execute()
-    return result.data
+    return Profile.model_validate(result.data)
 
 
-def update_client(client_id: str, body: dict) -> dict | None:
+def update_client(client_id: str, body: dict) -> Profile | None:
     result = (
         get_admin_client()
         .table("profiles")
@@ -55,7 +58,9 @@ def update_client(client_id: str, body: dict) -> dict | None:
         .single()
         .execute()
     )
-    return result.data
+    if result is None or result.data is None:
+        return None
+    return Profile.model_validate(result.data)
 
 
 def deactivate_client(client_id: str) -> None:
