@@ -40,8 +40,8 @@ def create_conversation(recipient_id: str) -> dict:
             if existing:
                 return {"id": existing["id"]}
 
-    _new_res = admin.table("conversations").insert({"created_by": user.id, "is_group": False}).select().maybe_single().execute()
-    new_conv: dict[str, Any] = cast(dict[str, Any], _new_res.data)
+    _new_res = admin.table("conversations").insert({"created_by": user.id, "is_group": False}).select().execute()
+    new_conv: dict[str, Any] = cast(dict[str, Any], _new_res.data[0])
     admin.table("conversation_participants").insert([
         {"conversation_id": new_conv["id"], "profile_id": user.id},
         {"conversation_id": new_conv["id"], "profile_id": recipient_id},

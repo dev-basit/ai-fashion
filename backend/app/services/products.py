@@ -33,8 +33,8 @@ def get_product(product_id: str) -> Product | None:
 
 
 def create_product(body: dict) -> Product:
-    result = get_db().table("products").insert(body).select().maybe_single().execute()
-    return Product.model_validate(result.data)
+    result = get_db().table("products").insert(body).select().execute()
+    return Product.model_validate(result.data[0])
 
 
 def update_product(product_id: str, body: dict) -> Product | None:
@@ -43,12 +43,11 @@ def update_product(product_id: str, body: dict) -> Product | None:
         .update(body)
         .eq("id", product_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return Product.model_validate(result.data)
+    return Product.model_validate(result.data[0])
 
 
 def delete_product(product_id: str) -> None:
@@ -67,8 +66,8 @@ def list_product_categories() -> list:
 
 
 def create_product_category(body: dict) -> ProductCategory:
-    result = get_db().table("product_categories").insert(body).select().maybe_single().execute()
-    return ProductCategory.model_validate(result.data)
+    result = get_db().table("product_categories").insert(body).select().execute()
+    return ProductCategory.model_validate(result.data[0])
 
 
 def get_low_stock_products() -> list:

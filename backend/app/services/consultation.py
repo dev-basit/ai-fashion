@@ -34,8 +34,8 @@ def get_record(record_id: str) -> ConsultationRecord | None:
 def create_record(body: dict) -> ConsultationRecord:
     user = get_current_user()
     db = get_db()
-    result = db.table("consultation_records").insert(body).select().maybe_single().execute()
-    data = result.data
+    result = db.table("consultation_records").insert(body).select().execute()
+    data: dict[str, Any] = cast(dict[str, Any], result.data[0])
     validated_data = ConsultationRecord.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
@@ -62,12 +62,11 @@ def update_record(record_id: str, body: dict) -> ConsultationRecord | None:
         .update(body)
         .eq("id", record_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return ConsultationRecord.model_validate(result.data)
+    return ConsultationRecord.model_validate(result.data[0])
 
 
 def list_templates() -> list:
@@ -95,8 +94,8 @@ def get_template(template_id: str) -> ConsultationFormTemplate | None:
 
 
 def create_template(body: dict) -> ConsultationFormTemplate:
-    result = get_db().table("consultation_form_templates").insert(body).select().maybe_single().execute()
-    return ConsultationFormTemplate.model_validate(result.data)
+    result = get_db().table("consultation_form_templates").insert(body).select().execute()
+    return ConsultationFormTemplate.model_validate(result.data[0])
 
 
 def update_template(template_id: str, body: dict) -> ConsultationFormTemplate | None:
@@ -105,9 +104,8 @@ def update_template(template_id: str, body: dict) -> ConsultationFormTemplate | 
         .update(body)
         .eq("id", template_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return ConsultationFormTemplate.model_validate(result.data)
+    return ConsultationFormTemplate.model_validate(result.data[0])

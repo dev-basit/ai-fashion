@@ -35,8 +35,8 @@ def get_plan(plan_id: str) -> ClientTreatmentPlan | None:
 
 def create_plan(body: dict) -> ClientTreatmentPlan:
     db = get_db()
-    result = db.table("client_treatment_plans").insert(body).select().maybe_single().execute()
-    data = result.data
+    result = db.table("client_treatment_plans").insert(body).select().execute()
+    data: dict[str, Any] = cast(dict[str, Any], result.data[0])
     validated_data = ClientTreatmentPlan.model_validate(data)
     client_id = body.get("client_id")
     if client_id:
@@ -69,12 +69,11 @@ def update_plan(plan_id: str, body: dict) -> ClientTreatmentPlan | None:
         .update(body)
         .eq("id", plan_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return ClientTreatmentPlan.model_validate(result.data)
+    return ClientTreatmentPlan.model_validate(result.data[0])
 
 
 def list_templates() -> list:
@@ -102,8 +101,8 @@ def get_template(template_id: str) -> TreatmentPlanTemplate | None:
 
 
 def create_template(body: dict) -> TreatmentPlanTemplate:
-    result = get_db().table("treatment_plan_templates").insert(body).select().maybe_single().execute()
-    return TreatmentPlanTemplate.model_validate(result.data)
+    result = get_db().table("treatment_plan_templates").insert(body).select().execute()
+    return TreatmentPlanTemplate.model_validate(result.data[0])
 
 
 def update_template(template_id: str, body: dict) -> TreatmentPlanTemplate | None:
@@ -112,9 +111,8 @@ def update_template(template_id: str, body: dict) -> TreatmentPlanTemplate | Non
         .update(body)
         .eq("id", template_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return TreatmentPlanTemplate.model_validate(result.data)
+    return TreatmentPlanTemplate.model_validate(result.data[0])

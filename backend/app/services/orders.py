@@ -86,12 +86,12 @@ def update_order(order_id: str, body: dict) -> Order | None:
     db = get_db()
     _existing_res = db.table("orders").select("status, client_id").eq("id", order_id).maybe_single().execute()
     existing: dict[str, Any] = cast(dict[str, Any], (_existing_res.data if _existing_res is not None else None) or {})
-    result = db.table("orders").update(body).eq("id", order_id).select().maybe_single().execute()
+    result = db.table("orders").update(body).eq("id", order_id).select().execute()
 
-    if result is None or result.data is None:
+    if not result.data:
         return None
 
-    data = result.data
+    data = result.data[0]
     if body.get("status") == "delivered" and existing.get("status") != "delivered" and existing.get("client_id"):
         notify_user_and_admins(
             existing["client_id"],

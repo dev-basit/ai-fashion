@@ -81,10 +81,9 @@ def create_appointment(body: dict) -> dict:
         get_db().table("appointments")
         .insert({**body, "client_id": client_id, "ends_at": ends_at, "price": price})
         .select()
-        .maybe_single()
         .execute()
     )
-    apt = result.data
+    apt: dict[str, Any] = cast(dict[str, Any], result.data[0])
 
     svc_res = get_db().table("services").select("name").eq("id", apt["service_id"]).maybe_single().execute() if apt.get("service_id") else None
     client_res = get_db().table("profiles").select("full_name").eq("id", apt["client_id"]).maybe_single().execute()

@@ -27,8 +27,8 @@ def get_service(service_id: str) -> Service | None:
 
 
 def create_service(body: dict) -> Service:
-    result = get_db().table("services").insert(body).select().maybe_single().execute()
-    return Service.model_validate(result.data)
+    result = get_db().table("services").insert(body).select().execute()
+    return Service.model_validate(result.data[0])
 
 
 def update_service(service_id: str, body: dict) -> Service | None:
@@ -37,12 +37,11 @@ def update_service(service_id: str, body: dict) -> Service | None:
         .update(body)
         .eq("id", service_id)
         .select()
-        .maybe_single()
         .execute()
     )
-    if result is None or result.data is None:
+    if not result.data:
         return None
-    return Service.model_validate(result.data)
+    return Service.model_validate(result.data[0])
 
 
 def delete_service(service_id: str) -> None:
@@ -61,8 +60,8 @@ def list_categories() -> list:
 
 
 def create_category(body: dict) -> ServiceCategory:
-    result = get_db().table("service_categories").insert(body).select().maybe_single().execute()
-    return ServiceCategory.model_validate(result.data)
+    result = get_db().table("service_categories").insert(body).select().execute()
+    return ServiceCategory.model_validate(result.data[0])
 
 
 def get_category(category_id: str) -> ServiceCategory | None:
