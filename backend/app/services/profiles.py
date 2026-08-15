@@ -1,11 +1,11 @@
-from supabase import Client
-
+from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_client
 
 
-def get_me(supabase: Client, user) -> dict:
+def get_me() -> dict:
+    user = get_current_user()
     result = (
-        supabase.table("profiles")
+        get_db().table("profiles")
         .select("id, full_name, phone, role, avatar_url, date_of_birth, created_at")
         .eq("id", user.id)
         .single()
@@ -14,9 +14,9 @@ def get_me(supabase: Client, user) -> dict:
     return {**(result.data or {}), "email": user.email}
 
 
-def list_profiles(supabase: Client) -> list:
+def list_profiles() -> list:
     result = (
-        supabase.table("profiles")
+        get_db().table("profiles")
         .select("*")
         .eq("is_active", True)
         .order("full_name")
@@ -25,9 +25,9 @@ def list_profiles(supabase: Client) -> list:
     return result.data or []
 
 
-def get_profile(supabase: Client, profile_id: str) -> dict | None:
+def get_profile(profile_id: str) -> dict | None:
     result = (
-        supabase.table("profiles")
+        get_db().table("profiles")
         .select("*")
         .eq("id", profile_id)
         .maybe_single()
@@ -36,9 +36,9 @@ def get_profile(supabase: Client, profile_id: str) -> dict | None:
     return result.data
 
 
-def update_profile(supabase: Client, profile_id: str, body: dict) -> dict | None:
+def update_profile(profile_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("profiles")
+        get_db().table("profiles")
         .update(body)
         .eq("id", profile_id)
         .select()

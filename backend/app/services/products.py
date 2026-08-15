@@ -1,13 +1,12 @@
 from typing import Optional
 
-from supabase import Client
-
+from app.core.context import get_db
 from app.core.supabase import get_admin_client
 
 
-def list_products(supabase: Client, search: Optional[str] = None, category_id: Optional[str] = None) -> list:
+def list_products(search: Optional[str] = None, category_id: Optional[str] = None) -> list:
     query = (
-        supabase.table("products")
+        get_db().table("products")
         .select("*, product_categories(id, name)")
         .eq("is_active", True)
         .order("name")
@@ -19,9 +18,9 @@ def list_products(supabase: Client, search: Optional[str] = None, category_id: O
     return query.execute().data or []
 
 
-def get_product(supabase: Client, product_id: str) -> dict | None:
+def get_product(product_id: str) -> dict | None:
     result = (
-        supabase.table("products")
+        get_db().table("products")
         .select("*, product_categories(*)")
         .eq("id", product_id)
         .maybe_single()
@@ -30,14 +29,14 @@ def get_product(supabase: Client, product_id: str) -> dict | None:
     return result.data
 
 
-def create_product(supabase: Client, body: dict) -> dict:
-    result = supabase.table("products").insert(body).select().single().execute()
+def create_product(body: dict) -> dict:
+    result = get_db().table("products").insert(body).select().single().execute()
     return result.data
 
 
-def update_product(supabase: Client, product_id: str, body: dict) -> dict | None:
+def update_product(product_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("products")
+        get_db().table("products")
         .update(body)
         .eq("id", product_id)
         .select()
@@ -47,13 +46,13 @@ def update_product(supabase: Client, product_id: str, body: dict) -> dict | None
     return result.data
 
 
-def delete_product(supabase: Client, product_id: str) -> None:
-    supabase.table("products").update({"is_active": False}).eq("id", product_id).execute()
+def delete_product(product_id: str) -> None:
+    get_db().table("products").update({"is_active": False}).eq("id", product_id).execute()
 
 
-def list_product_categories(supabase: Client) -> list:
+def list_product_categories() -> list:
     result = (
-        supabase.table("product_categories")
+        get_db().table("product_categories")
         .select("*")
         .eq("is_active", True)
         .order("sort_order")
@@ -62,8 +61,8 @@ def list_product_categories(supabase: Client) -> list:
     return result.data or []
 
 
-def create_product_category(supabase: Client, body: dict) -> dict:
-    result = supabase.table("product_categories").insert(body).select().single().execute()
+def create_product_category(body: dict) -> dict:
+    result = get_db().table("product_categories").insert(body).select().single().execute()
     return result.data
 
 

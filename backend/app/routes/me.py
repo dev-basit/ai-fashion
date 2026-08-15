@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.core.auth import AuthContext, get_auth
 from app.services import profiles as profiles_svc
 
 router = APIRouter(tags=["me"])
 
 
 @router.get("")
-def get_me(auth: AuthContext = Depends(get_auth)):
-    data = profiles_svc.get_me(auth.supabase, auth.user)
+def get_me():
+    data = profiles_svc.get_me()
     return {"data": data}

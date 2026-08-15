@@ -4,7 +4,6 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase
 from app.services import salon_services as svc
 
 
@@ -13,7 +12,7 @@ def list_services(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all active services with their categories, pricing, duration, and variants. Use this to find valid service IDs for booking."""
-    data = svc.list_services(get_supabase(config))
+    data = svc.list_services()
     if not data:
         return "No services available."
     return json.dumps(
@@ -33,7 +32,7 @@ def create_service(
 ) -> str:
     """Create a new service. Admin only."""
     try:
-        svc.create_service(get_supabase(config), {"name": name, "base_price": base_price, "duration_mins": duration_minutes, "description": description, "category_id": category_id})
+        svc.create_service({"name": name, "base_price": base_price, "duration_mins": duration_minutes, "description": description, "category_id": category_id})
         return f"Service \"{name}\" created successfully."
     except Exception as e:
         return f"Failed to create service: {e}"
@@ -52,7 +51,7 @@ def update_service(
     """Update an existing service. Admin only."""
     try:
         body = {k: v for k, v in {"name": name, "description": description, "base_price": base_price, "duration_mins": duration_minutes, "is_active": is_active}.items() if v is not None}
-        svc.update_service(get_supabase(config), service_id, body)
+        svc.update_service(service_id, body)
         return f"Service {service_id} updated successfully."
     except Exception as e:
         return f"Failed to update service: {e}"

@@ -1,13 +1,12 @@
 from typing import Optional
 
-from supabase import Client
-
+from app.core.context import get_db
 from app.core.supabase import get_admin_client
 
 
-def list_staff(supabase: Client, profile_id: Optional[str] = None) -> list:
+def list_staff(profile_id: Optional[str] = None) -> list:
     query = (
-        supabase.table("staff_profiles")
+        get_db().table("staff_profiles")
         .select("*, profiles(id, full_name, avatar_url, phone, is_active)")
         .order("created_at", desc=True)
     )
@@ -16,9 +15,9 @@ def list_staff(supabase: Client, profile_id: Optional[str] = None) -> list:
     return query.execute().data or []
 
 
-def get_staff(supabase: Client, staff_id: str) -> dict | None:
+def get_staff(staff_id: str) -> dict | None:
     result = (
-        supabase.table("staff_profiles")
+        get_db().table("staff_profiles")
         .select("*, profiles(*), staff_services(services(*))")
         .eq("id", staff_id)
         .maybe_single()
@@ -54,9 +53,9 @@ def create_staff(body: dict) -> dict:
     return result.data
 
 
-def update_staff(supabase: Client, staff_id: str, body: dict) -> dict | None:
+def update_staff(staff_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("staff_profiles")
+        get_db().table("staff_profiles")
         .update(body)
         .eq("id", staff_id)
         .select()
@@ -66,9 +65,9 @@ def update_staff(supabase: Client, staff_id: str, body: dict) -> dict | None:
     return result.data
 
 
-def get_schedule(supabase: Client, staff_id: str) -> list:
+def get_schedule(staff_id: str) -> list:
     result = (
-        supabase.table("staff_schedules")
+        get_db().table("staff_schedules")
         .select("*")
         .eq("staff_profile_id", staff_id)
         .order("day_of_week")
@@ -77,14 +76,14 @@ def get_schedule(supabase: Client, staff_id: str) -> list:
     return result.data or []
 
 
-def update_schedule(supabase: Client, staff_id: str, schedules: list) -> None:
+def update_schedule(staff_id: str, schedules: list) -> None:
     rows = [{**s, "staff_profile_id": staff_id} for s in schedules]
-    supabase.table("staff_schedules").upsert(rows, on_conflict="staff_profile_id,day_of_week").execute()
+    get_db().table("staff_schedules").upsert(rows, on_conflict="staff_profile_id,day_of_week").execute()
 
 
-def get_leaves(supabase: Client, staff_id: str) -> list:
+def get_leaves(staff_id: str) -> list:
     result = (
-        supabase.table("staff_leaves")
+        get_db().table("staff_leaves")
         .select("*")
         .eq("staff_profile_id", staff_id)
         .order("starts_at")
@@ -93,9 +92,9 @@ def get_leaves(supabase: Client, staff_id: str) -> list:
     return result.data or []
 
 
-def create_leave(supabase: Client, staff_id: str, body: dict) -> dict:
+def create_leave(staff_id: str, body: dict) -> dict:
     result = (
-        supabase.table("staff_leaves")
+        get_db().table("staff_leaves")
         .insert({**body, "staff_profile_id": staff_id})
         .select()
         .single()
@@ -104,13 +103,13 @@ def create_leave(supabase: Client, staff_id: str, body: dict) -> dict:
     return result.data
 
 
-def delete_leave(supabase: Client, staff_id: str, leave_id: str) -> None:
-    supabase.table("staff_leaves").delete().eq("id", leave_id).eq("staff_profile_id", staff_id).execute()
+def delete_leave(staff_id: str, leave_id: str) -> None:
+    get_db().table("staff_leaves").delete().eq("id", leave_id).eq("staff_profile_id", staff_id).execute()
 
 
-def get_staff_services(supabase: Client, staff_id: str) -> list:
+def get_staff_services(staff_id: str) -> list:
     result = (
-        supabase.table("staff_services")
+        get_db().table("staff_services")
         .select("*, services(*)")
         .eq("staff_profile_id", staff_id)
         .execute()
@@ -118,9 +117,9 @@ def get_staff_services(supabase: Client, staff_id: str) -> list:
     return result.data or []
 
 
-def add_staff_service(supabase: Client, staff_id: str, service_id: str) -> None:
-    supabase.table("staff_services").insert({"staff_profile_id": staff_id, "service_id": service_id}).execute()
+def add_staff_service(staff_id: str, service_id: str) -> None:
+    get_db().table("staff_services").insert({"staff_profile_id": staff_id, "service_id": service_id}).execute()
 
 
-def remove_staff_service(supabase: Client, staff_id: str, service_id: str) -> None:
-    supabase.table("staff_services").delete().eq("staff_profile_id", staff_id).eq("service_id", service_id).execute()
+def remove_staff_service(staff_id: str, service_id: str) -> None:
+    get_db().table("staff_services").delete().eq("staff_profile_id", staff_id).eq("service_id", service_id).execute()

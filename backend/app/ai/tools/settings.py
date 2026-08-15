@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.services import settings as settings_svc
 
 
@@ -13,7 +13,7 @@ def get_settings(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Get current business settings (name, contact details, working hours, booking rules). Admin only."""
-    data = settings_svc.get_settings(get_supabase(config))
+    data = settings_svc.get_settings()
     return json.dumps(data, indent=2)
 
 
@@ -25,7 +25,7 @@ def update_settings(
 ) -> str:
     """Update a business setting. Admin only. Confirm with admin before updating."""
     try:
-        settings_svc.update_setting(get_supabase(config), get_user_id(config), key, value)
+        settings_svc.update_setting(get_user_id(config), key, value)
         return "Business settings updated successfully."
     except Exception as e:
         return f"Failed to update settings: {e}"

@@ -4,17 +4,19 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.services import consultation as consultation_svc
 
 
 @tool
 def get_my_consultation_records(
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
+    config: Annotated[RunnableConfig, InjectedToolArg],
 ) -> str:
     """Get the current customer's own consultation records."""
-    user_id = get_user_id(config)
-    data = consultation_svc.list_records(get_supabase(config), client_id=user_id)
+    from app.core.context import get_current_user
+
+    user_id = get_current_user().id
+    data = consultation_svc.list_records(client_id=user_id)
     if not data:
         return "You have no consultation records."
     return json.dumps(
@@ -29,14 +31,13 @@ def get_consultation_records(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List consultation records. Optionally filter by a specific client."""
-    data = consultation_svc.list_records(get_supabase(config), client_id=client_id)
+    data = consultation_svc.list_records(client_id=client_id)
     if not data:
         return "No consultation records found."
     return json.dumps(
         [{"id": r["id"], "client": (r.get("profiles") or {}).get("full_name"), "template": (r.get("consultation_form_templates") or {}).get("name"), "notes": r.get("notes"), "created_at": r.get("created_at")} for r in data],
         indent=2,
     )
-
 
 @tool
 def create_consultation_record(
@@ -49,7 +50,7 @@ def create_consultation_record(
     """Create a consultation record for a client. Staff and admin only."""
     try:
         body = {k: v for k, v in {"client_id": client_id, "template_id": template_id, "notes": notes, "recommendations": recommendations}.items() if v is not None}
-        consultation_svc.create_record(get_supabase(config), get_user_id(config), body)
+        consultation_svc.create_record(body)
         return f"Consultation record created successfully for client {client_id}."
     except Exception as e:
         return f"Failed to create record: {e}"

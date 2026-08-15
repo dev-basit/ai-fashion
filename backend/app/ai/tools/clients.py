@@ -1,17 +1,12 @@
 import json
 from typing import Annotated, Optional
-
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
-
-from app.ai.tools.utils import get_supabase
+from langchain_core.tools import tool
 from app.services import clients as clients_svc
 
 
 @tool
 def get_clients(
-    search: Annotated[Optional[str], "Search clients by name"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
+    search: Annotated[Optional[str], "Search clients by name"] = None
 ) -> str:
     """List all active clients. Optionally search by name."""
     data = clients_svc.list_clients(search=search)
@@ -26,7 +21,6 @@ def get_clients(
 @tool
 def get_client(
     client_id: Annotated[str, "UUID of the client profile"],
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Get full profile details for a specific client by their UUID."""
     data = clients_svc.get_client(client_id)
@@ -41,7 +35,6 @@ def create_client(
     full_name: Annotated[str, "Client's full name"],
     password: Annotated[str, "Initial password"],
     phone: Annotated[Optional[str], "Client's phone number"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Create a new customer account. Admin only."""
     try:
@@ -57,7 +50,6 @@ def update_client(
     full_name: Annotated[Optional[str], "New full name"] = None,
     phone: Annotated[Optional[str], "New phone number"] = None,
     is_active: Annotated[Optional[bool], "Set false to deactivate the account"] = None,
-    config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Update a client's profile details. Admin or staff can do this."""
     try:

@@ -1,27 +1,29 @@
 from typing import Optional
 
-from supabase import Client
-
+from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
 from app.core.supabase import get_admin_client
 
 
-def list_orders(supabase: Client, user_id: str, user_role: str, client_id: Optional[str] = None) -> list:
+def list_orders(client_id: Optional[str] = None) -> list:
+    user = get_current_user()
+    db = get_db()
+
     query = (
-        supabase.table("orders")
+        db.table("orders")
         .select("*, profiles!client_id(id, full_name), order_items(*, products(name, image_url))")
         .order("created_at", desc=True)
     )
-    if user_role == "customer":
-        query = query.eq("client_id", user_id)
+    if user.user_metadata.get("role") == "customer":
+        query = query.eq("client_id", user.id)
     elif client_id:
         query = query.eq("client_id", client_id)
     return query.execute().data or []
 
 
-def get_order(supabase: Client, order_id: str) -> dict | None:
+def get_order(order_id: str) -> dict | None:
     result = (
-        supabase.table("orders")
+        get_db().table("orders")
         .select("*, profiles!client_id(id, full_name, phone), order_items(*, products(*))")
         .eq("id", order_id)
         .maybe_single()
@@ -30,12 +32,13 @@ def get_order(supabase: Client, order_id: str) -> dict | None:
     return result.data
 
 
-def create_order(supabase: Client, body: dict) -> dict:
+def create_order(body: dict) -> dict:
+    db = get_db()
     items = body["items"]
     total = sum(i["quantity"] * i["unit_price"] for i in items)
 
     order_result = (
-        supabase.table("orders")
+        db.table("orders")
         .insert({"client_id": body["client_id"], "total_amount": total, "notes": body.get("notes")})
         .select()
         .single()
@@ -43,7 +46,7 @@ def create_order(supabase: Client, body: dict) -> dict:
     )
     order = order_result.data
 
-    supabase.table("order_items").insert([
+    db.table("order_items").insert([
         {"order_id": order["id"], "product_id": i["product_id"], "quantity": i["quantity"], "unit_price": i["unit_price"]}
         for i in items
     ]).execute()
@@ -56,7 +59,7 @@ def create_order(supabase: Client, body: dict) -> dict:
         admin.table("products").update({"stock_quantity": max(0, current - item["quantity"])}).eq("id", item["product_id"]).execute()
 
     item_count = sum(i["quantity"] for i in items)
-    client_profile = supabase.table("profiles").select("full_name").eq("id", body["client_id"]).single().execute()
+    client_profile = db.table("profiles").select("full_name").eq("id", body["client_id"]).single().execute()
     client_name = (client_profile.data or {}).get("full_name", "A client")
 
     notify_user_and_admins(
@@ -75,9 +78,10 @@ def create_order(supabase: Client, body: dict) -> dict:
     return order
 
 
-def update_order(supabase: Client, order_id: str, body: dict) -> dict | None:
-    existing = supabase.table("orders").select("status, client_id").eq("id", order_id).single().execute().data or {}
-    result = supabase.table("orders").update(body).eq("id", order_id).select().single().execute()
+def update_order(order_id: str, body: dict) -> dict | None:
+    db = get_db()
+    existing = db.table("orders").select("status, client_id").eq("id", order_id).single().execute().data or {}
+    result = db.table("orders").update(body).eq("id", order_id).select().single().execute()
     data = result.data
 
     if body.get("status") == "delivered" and existing.get("status") != "delivered" and existing.get("client_id"):

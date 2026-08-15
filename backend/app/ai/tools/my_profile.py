@@ -4,7 +4,7 @@ from typing import Annotated
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.services import profiles as profiles_svc
 
 
@@ -19,9 +19,8 @@ def get_my_profile(
             self.id = user_id
             self.email = None
 
-    supabase = get_supabase(config)
     user_id = get_user_id(config)
-    profile = profiles_svc.get_me(supabase, _User(user_id))
+    profile = profiles_svc.get_me(_User(user_id))
     return json.dumps(profile, indent=2)
 
 

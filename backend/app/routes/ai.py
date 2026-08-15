@@ -1,42 +1,42 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
 from app.config.settings import settings
-from app.core.auth import AuthContext, get_auth
+from app.core.context import get_current_user, get_db, get_token
 from app.services import ai_service
 
 router = APIRouter(tags=["ai"])
 
 
 @router.get("/conversations")
-def list_conversations(auth: AuthContext = Depends(get_auth)):
-    return {"data": ai_service.list_conversations(auth.supabase, auth.user.id)}
+def list_conversations():
+    return {"data": ai_service.list_conversations()}
 
 
 @router.post("/conversations")
-def create_conversation(auth: AuthContext = Depends(get_auth)):
-    data = ai_service.create_conversation(auth.supabase, auth.user.id)
+def create_conversation():
+    data = ai_service.create_conversation()
     return {"data": data}
 
 
 @router.get("/conversations/{conversation_id}/messages")
-def get_conversation_messages(conversation_id: str, auth: AuthContext = Depends(get_auth)):
-    return {"data": ai_service.get_messages(auth.supabase, conversation_id)}
+def get_conversation_messages(conversation_id: str):
+    return {"data": ai_service.get_messages(conversation_id)}
 
 
 @router.delete("/conversations/{conversation_id}")
-def delete_conversation(conversation_id: str, auth: AuthContext = Depends(get_auth)):
-    count = ai_service.delete_conversation(auth.supabase, conversation_id)
+def delete_conversation(conversation_id: str):
+    count = ai_service.delete_conversation(conversation_id)
     if not count:
         raise HTTPException(status_code=404, detail="Not found")
     return {"success": True}
 
 
 @router.post("/chat")
-async def ai_chat(body: dict, auth: AuthContext = Depends(get_auth)):
+async def ai_chat(body: dict):
     message: str = body.get("message", "")
     conversation_id: str = body.get("conversationId", "")
     timezone_str: str = body.get("timezone", "UTC")
@@ -46,11 +46,15 @@ async def ai_chat(body: dict, auth: AuthContext = Depends(get_auth)):
     if not conversation_id:
         raise HTTPException(status_code=400, detail="conversationId required")
 
-    profile = auth.supabase.table("profiles").select("role").eq("id", auth.user.id).single().execute()
+    user = get_current_user()
+    db = get_db()
+    token = get_token()
+
+    profile = db.table("profiles").select("role").eq("id", user.id).single().execute()
     user_role: str = (profile.data or {}).get("role", "customer")
 
     today = date.today().isoformat()
-    call_count, is_limited = ai_service.check_rate_limit(auth.user.id, today)
+    call_count, is_limited = ai_service.check_rate_limit(user.id, today)
 
     if is_limited:
         raise HTTPException(
@@ -59,12 +63,12 @@ async def ai_chat(body: dict, auth: AuthContext = Depends(get_auth)):
             headers={"X-RateLimit-Limit": str(settings.ai_daily_limit), "X-RateLimit-Remaining": "0"},
         )
 
-    if not ai_service.verify_conversation_owner(conversation_id, auth.user.id):
+    if not ai_service.verify_conversation_owner(conversation_id, user.id):
         raise HTTPException(status_code=404, detail="Conversation not found")
 
     history = ai_service.load_history(conversation_id)
 
-    ai_service.increment_usage(auth.user.id, today, call_count)
+    ai_service.increment_usage(user.id, today, call_count)
     ai_service.save_message(conversation_id, "user", message)
 
     if not history:
@@ -83,7 +87,7 @@ async def ai_chat(body: dict, auth: AuthContext = Depends(get_auth)):
         try:
             async for chunk, meta in graph.astream(
                 {"messages": messages, "user_role": user_role, "context": ""},
-                config={"configurable": {"access_token": auth.token, "user_id": auth.user.id, "timezone": timezone_str}},
+                config={"configurable": {"access_token": token, "user_id": user.id, "timezone": timezone_str}},
                 stream_mode="messages",
             ):
                 if meta.get("langgraph_node") == "agent" and isinstance(chunk.content, str) and chunk.content:

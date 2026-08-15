@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config.settings import settings
+from app.core.context import _db_var, _user_var, _token_var
+from app.core.supabase import get_admin_client, get_user_client
 from app.routes import health
 from app.routes import me, profiles
 from app.routes import salon_services, products, clients, staff
@@ -14,6 +17,34 @@ from app.routes import chat
 from app.routes import ai
 
 app = FastAPI(title="Glow By Miral API")
+
+PUBLIC_PATHS = {"/health"}
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if request.url.path in PUBLIC_PATHS:
+        return await call_next(request)
+
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    token = auth_header.removeprefix("Bearer ")
+    response = get_admin_client().auth.get_user(token)
+    if not response.user:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    t1 = _user_var.set(response.user)
+    t2 = _token_var.set(token)
+    t3 = _db_var.set(get_user_client(token))
+    try:
+        return await call_next(request)
+    finally:
+        _user_var.reset(t1)
+        _token_var.reset(t2)
+        _db_var.reset(t3)
+
 
 app.add_middleware(
     CORSMiddleware,

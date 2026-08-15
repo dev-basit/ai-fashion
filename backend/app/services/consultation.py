@@ -1,13 +1,12 @@
 from typing import Optional
 
-from supabase import Client
-
+from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
 
 
-def list_records(supabase: Client, client_id: Optional[str] = None, staff_profile_id: Optional[str] = None) -> list:
+def list_records(client_id: Optional[str] = None, staff_profile_id: Optional[str] = None) -> list:
     query = (
-        supabase.table("consultation_records")
+        get_db().table("consultation_records")
         .select("*, profiles!client_id(id, full_name, avatar_url), staff_profiles(profiles(full_name)), consultation_form_templates(name)")
         .order("created_at", desc=True)
     )
@@ -18,9 +17,9 @@ def list_records(supabase: Client, client_id: Optional[str] = None, staff_profil
     return query.execute().data or []
 
 
-def get_record(supabase: Client, record_id: str) -> dict | None:
+def get_record(record_id: str) -> dict | None:
     result = (
-        supabase.table("consultation_records")
+        get_db().table("consultation_records")
         .select("*, profiles!client_id(*), staff_profiles(*, profiles(*)), consultation_form_templates(*)")
         .eq("id", record_id)
         .maybe_single()
@@ -29,15 +28,17 @@ def get_record(supabase: Client, record_id: str) -> dict | None:
     return result.data
 
 
-def create_record(supabase: Client, user_id: str, body: dict) -> dict:
-    result = supabase.table("consultation_records").insert(body).select().single().execute()
+def create_record(body: dict) -> dict:
+    user = get_current_user()
+    db = get_db()
+    result = db.table("consultation_records").insert(body).select().single().execute()
     data = result.data
     client_id = body.get("client_id")
     if client_id:
-        client_profile = supabase.table("profiles").select("full_name").eq("id", client_id).single().execute()
+        client_profile = db.table("profiles").select("full_name").eq("id", client_id).single().execute()
         client_name = (client_profile.data or {}).get("full_name", "A client")
         notify_user_and_admins(
-            client_id if client_id != user_id else None,
+            client_id if client_id != user.id else None,
             {"type": "system", "title": "Consultation record created",
              "body": "A consultation record has been created for you. You can view it in your profile.",
              "data": {"record_id": data["id"]}},
@@ -51,9 +52,9 @@ def create_record(supabase: Client, user_id: str, body: dict) -> dict:
     return data
 
 
-def update_record(supabase: Client, record_id: str, body: dict) -> dict | None:
+def update_record(record_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("consultation_records")
+        get_db().table("consultation_records")
         .update(body)
         .eq("id", record_id)
         .select()
@@ -63,9 +64,9 @@ def update_record(supabase: Client, record_id: str, body: dict) -> dict | None:
     return result.data
 
 
-def list_templates(supabase: Client) -> list:
+def list_templates() -> list:
     result = (
-        supabase.table("consultation_form_templates")
+        get_db().table("consultation_form_templates")
         .select("*")
         .eq("is_active", True)
         .order("name")
@@ -74,9 +75,9 @@ def list_templates(supabase: Client) -> list:
     return result.data or []
 
 
-def get_template(supabase: Client, template_id: str) -> dict | None:
+def get_template(template_id: str) -> dict | None:
     result = (
-        supabase.table("consultation_form_templates")
+        get_db().table("consultation_form_templates")
         .select("*")
         .eq("id", template_id)
         .maybe_single()
@@ -85,14 +86,14 @@ def get_template(supabase: Client, template_id: str) -> dict | None:
     return result.data
 
 
-def create_template(supabase: Client, body: dict) -> dict:
-    result = supabase.table("consultation_form_templates").insert(body).select().single().execute()
+def create_template(body: dict) -> dict:
+    result = get_db().table("consultation_form_templates").insert(body).select().single().execute()
     return result.data
 
 
-def update_template(supabase: Client, template_id: str, body: dict) -> dict | None:
+def update_template(template_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("consultation_form_templates")
+        get_db().table("consultation_form_templates")
         .update(body)
         .eq("id", template_id)
         .select()

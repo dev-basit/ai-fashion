@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.config.settings import settings
 from app.services import orders as orders_svc
 
@@ -26,7 +26,7 @@ def get_my_orders(
 ) -> str:
     """List the current customer's own orders with item details and status."""
     user_id = get_user_id(config)
-    data = orders_svc.list_orders(get_supabase(config), user_id, "customer")
+    data = orders_svc.list_orders(user_id, "customer")
     if not data:
         return "You have no orders."
     return json.dumps([_format_order(o) for o in data[:limit]], indent=2)
@@ -38,7 +38,7 @@ def get_order_status(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Get the full details and status of a specific order by its ID."""
-    data = orders_svc.get_order(get_supabase(config), order_id)
+    data = orders_svc.get_order(order_id)
     if not data:
         return "Order not found."
     return json.dumps(_format_order(data), indent=2)
@@ -51,7 +51,7 @@ def get_all_orders(
 ) -> str:
     """List all orders across all clients. Optionally filter by a specific client."""
     user_id = get_user_id(config)
-    data = orders_svc.list_orders(get_supabase(config), user_id, "admin", client_id=client_id)
+    data = orders_svc.list_orders(user_id, "admin", client_id=client_id)
     if not data:
         return "No orders found."
     return json.dumps(
@@ -68,7 +68,7 @@ def update_order_status(
 ) -> str:
     """Update the status of an order. Admin only."""
     try:
-        orders_svc.update_order(get_supabase(config), order_id, {"status": status})
+        orders_svc.update_order(order_id, {"status": status})
         return f"Order {order_id} status updated to \"{status}\"."
     except Exception as e:
         return f"Failed to update order: {e}"

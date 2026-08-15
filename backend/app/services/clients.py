@@ -1,5 +1,6 @@
 from typing import Optional
 
+from app.core.context import get_db
 from app.core.supabase import get_admin_client
 
 
@@ -61,9 +62,8 @@ def deactivate_client(client_id: str) -> None:
     get_admin_client().table("profiles").update({"is_active": False}).eq("id", client_id).execute()
 
 
-def get_client_history(supabase, client_id: str) -> dict:
-    from supabase import Client
-    db: Client = supabase
+def get_client_history(client_id: str) -> dict:
+    db = get_db()
     appointments = db.table("appointments").select("*, services(name, base_price), staff_profiles(profiles(full_name))").eq("client_id", client_id).order("starts_at", desc=True).execute().data or []
     orders = db.table("orders").select("*, order_items(*, products(name))").eq("client_id", client_id).order("created_at", desc=True).execute().data or []
     consultations = db.table("consultation_records").select("*, consultation_form_templates(name), staff_profiles(profiles(full_name))").eq("client_id", client_id).order("created_at", desc=True).execute().data or []
@@ -71,9 +71,8 @@ def get_client_history(supabase, client_id: str) -> dict:
     return {"appointments": appointments, "orders": orders, "consultations": consultations, "plans": plans}
 
 
-def get_appointment_counts(supabase) -> dict:
-    from supabase import Client
-    db: Client = supabase
+def get_appointment_counts() -> dict:
+    db = get_db()
     rows = db.table("appointments").select("client_id").execute().data or []
     counts: dict[str, int] = {}
     for row in rows:

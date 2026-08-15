@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.config.settings import settings
 from app.services import appointments as appts_svc
 
@@ -16,7 +16,7 @@ def get_my_appointments(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List the current user's own appointments. Optionally filter by status."""
-    data = appts_svc.list_appointments(get_supabase(config), status=status)
+    data = appts_svc.list_appointments(status=status)
     if not data:
         return "You have no appointments."
     return json.dumps(
@@ -36,7 +36,6 @@ def book_appointment(
     """Book a new appointment for the current customer."""
     try:
         data = appts_svc.create_appointment(
-            get_supabase(config),
             get_user_id(config),
             {"service_id": service_id, "staff_profile_id": staff_profile_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
         )
@@ -57,7 +56,6 @@ def book_appointment_for_client(
     """Book an appointment on behalf of a client. Requires client_id, service_id, and starts_at."""
     try:
         data = appts_svc.create_appointment(
-            get_supabase(config),
             get_user_id(config),
             {"client_id": client_id, "service_id": service_id, "staff_profile_id": staff_profile_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
         )
@@ -74,7 +72,7 @@ def cancel_appointment(
 ) -> str:
     """Cancel an appointment by ID. Confirm the appointment ID first."""
     try:
-        appts_svc.update_appointment(get_supabase(config), appointment_id, {"status": "cancelled", "internal_notes": reason})
+        appts_svc.update_appointment(appointment_id, {"status": "cancelled", "internal_notes": reason})
         return f"Appointment {appointment_id} cancelled successfully."
     except Exception as e:
         return f"Failed to cancel: {e}"
@@ -90,7 +88,7 @@ def get_all_appointments(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all appointments across all clients. Supports filtering by client, staff, status, or date range."""
-    data = appts_svc.list_appointments(get_supabase(config), client_id=client_id, staff_profile_id=staff_profile_id, status=status, from_=date_from, to=date_to)
+    data = appts_svc.list_appointments(client_id=client_id, staff_profile_id=staff_profile_id, status=status, from_=date_from, to=date_to)
     if not data:
         return "No appointments found."
     return json.dumps(
@@ -107,7 +105,7 @@ def update_appointment_status(
 ) -> str:
     """Update the status of any appointment."""
     try:
-        appts_svc.update_appointment(get_supabase(config), appointment_id, {"status": status})
+        appts_svc.update_appointment(appointment_id, {"status": status})
         return f"Appointment {appointment_id} updated to \"{status}\"."
     except Exception as e:
         return f"Failed to update: {e}"
@@ -120,7 +118,7 @@ def delete_appointment(
 ) -> str:
     """Permanently delete an appointment. Admin only. Ask for confirmation before proceeding."""
     try:
-        appts_svc.delete_appointment(get_supabase(config), appointment_id)
+        appts_svc.delete_appointment(appointment_id)
         return f"Appointment {appointment_id} deleted permanently."
     except Exception as e:
         return f"Failed to delete: {e}"

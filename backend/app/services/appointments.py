@@ -1,14 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from supabase import Client
-
+from app.core.context import get_db
 from app.core.notify import notify_admins, notify_user_and_admins
 from app.core.supabase import get_admin_client
 
 
 def list_appointments(
-    supabase: Client,
     client_id: Optional[str] = None,
     staff_profile_id: Optional[str] = None,
     service_id: Optional[str] = None,
@@ -17,7 +15,7 @@ def list_appointments(
     to: Optional[str] = None,
 ) -> list:
     query = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .select("*, services(id, name, duration_mins, base_price), profiles!client_id(id, full_name), staff_profiles(id, profiles(id, full_name))")
         .order("starts_at", desc=True)
     )
@@ -36,9 +34,9 @@ def list_appointments(
     return query.execute().data or []
 
 
-def get_appointment(supabase: Client, appointment_id: str) -> dict | None:
+def get_appointment(appointment_id: str) -> dict | None:
     result = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .select("*, services(*), profiles!client_id(*), staff_profiles(*, profiles(*))")
         .eq("id", appointment_id)
         .maybe_single()
@@ -47,8 +45,11 @@ def get_appointment(supabase: Client, appointment_id: str) -> dict | None:
     return result.data
 
 
-def create_appointment(supabase: Client, user_id: str, body: dict) -> dict:
-    profile = supabase.table("profiles").select("role").eq("id", user_id).single().execute()
+def create_appointment(body: dict) -> dict:
+    from app.core.context import get_current_user
+
+    user_id = get_current_user().id
+    profile = get_db().table("profiles").select("role").eq("id", user_id).single().execute()
     role = (profile.data or {}).get("role")
 
     client_id = user_id if role == "customer" else body.get("client_id")
@@ -59,7 +60,7 @@ def create_appointment(supabase: Client, user_id: str, body: dict) -> dict:
     price = body.get("price", 0)
 
     if body.get("service_id") and not ends_at:
-        svc = supabase.table("services").select("duration_mins, base_price").eq("id", body["service_id"]).single().execute()
+        svc = get_db().table("services").select("duration_mins, base_price").eq("id", body["service_id"]).single().execute()
         if svc.data:
             start = datetime.fromisoformat(body["starts_at"])
             ends_at = (start + timedelta(minutes=svc.data.get("duration_mins") or 60)).isoformat()
@@ -70,7 +71,7 @@ def create_appointment(supabase: Client, user_id: str, body: dict) -> dict:
         raise ValueError("ends_at is required")
 
     result = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .insert({**body, "client_id": client_id, "ends_at": ends_at, "price": price})
         .select()
         .single()
@@ -78,9 +79,9 @@ def create_appointment(supabase: Client, user_id: str, body: dict) -> dict:
     )
     apt = result.data
 
-    svc_res = supabase.table("services").select("name").eq("id", apt["service_id"]).single().execute() if apt.get("service_id") else None
-    client_res = supabase.table("profiles").select("full_name").eq("id", apt["client_id"]).single().execute()
-    staff_res = supabase.table("staff_profiles").select("profile_id").eq("id", apt["staff_profile_id"]).single().execute() if apt.get("staff_profile_id") else None
+    svc_res = get_db().table("services").select("name").eq("id", apt["service_id"]).single().execute() if apt.get("service_id") else None
+    client_res = get_db().table("profiles").select("full_name").eq("id", apt["client_id"]).single().execute()
+    staff_res = get_db().table("staff_profiles").select("profile_id").eq("id", apt["staff_profile_id"]).single().execute() if apt.get("staff_profile_id") else None
 
     service_name = (svc_res.data or {}).get("name", "appointment") if svc_res else "appointment"
     client_name = (client_res.data or {}).get("full_name", "A client")
@@ -97,9 +98,9 @@ def create_appointment(supabase: Client, user_id: str, body: dict) -> dict:
     return apt
 
 
-def update_appointment(supabase: Client, appointment_id: str, body: dict) -> dict | None:
+def update_appointment(appointment_id: str, body: dict) -> dict | None:
     result = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .update(body)
         .eq("id", appointment_id)
         .select()
@@ -109,17 +110,17 @@ def update_appointment(supabase: Client, appointment_id: str, body: dict) -> dic
     return result.data
 
 
-def delete_appointment(supabase: Client, appointment_id: str) -> None:
-    supabase.table("appointments").delete().eq("id", appointment_id).execute()
+def delete_appointment(appointment_id: str) -> None:
+    get_db().table("appointments").delete().eq("id", appointment_id).execute()
 
 
-def get_stats(supabase: Client) -> dict:
+def get_stats() -> dict:
     now = datetime.now(timezone.utc)
     start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     end = now.replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
 
     today_count = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .select("id", count="exact", head=True)
         .gte("starts_at", start)
         .lte("starts_at", end)
@@ -127,14 +128,14 @@ def get_stats(supabase: Client) -> dict:
     ).count or 0
 
     pending_count = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .select("id", count="exact", head=True)
         .eq("status", "pending")
         .execute()
     ).count or 0
 
     revenue_rows = (
-        supabase.table("appointments")
+        get_db().table("appointments")
         .select("price, discount")
         .eq("status", "completed")
         .eq("payment_status", "paid")
@@ -147,9 +148,9 @@ def get_stats(supabase: Client) -> dict:
     return {"todayCount": today_count, "pendingCount": pending_count, "todayRevenue": revenue}
 
 
-def get_appointment_products(supabase: Client, appointment_id: str) -> list:
+def get_appointment_products(appointment_id: str) -> list:
     result = (
-        supabase.table("appointment_products")
+        get_db().table("appointment_products")
         .select("*, products(id, name, stock_quantity)")
         .eq("appointment_id", appointment_id)
         .execute()
@@ -157,9 +158,9 @@ def get_appointment_products(supabase: Client, appointment_id: str) -> list:
     return result.data or []
 
 
-def add_appointment_product(supabase: Client, appointment_id: str, body: dict) -> dict:
+def add_appointment_product(appointment_id: str, body: dict) -> dict:
     result = (
-        supabase.table("appointment_products")
+        get_db().table("appointment_products")
         .insert({**body, "appointment_id": appointment_id})
         .select("*, products(name)")
         .single()
@@ -168,5 +169,5 @@ def add_appointment_product(supabase: Client, appointment_id: str, body: dict) -
     return result.data
 
 
-def remove_appointment_product(supabase: Client, product_id: str) -> None:
-    supabase.table("appointment_products").delete().eq("id", product_id).execute()
+def remove_appointment_product(product_id: str) -> None:
+    get_db().table("appointment_products").delete().eq("id", product_id).execute()

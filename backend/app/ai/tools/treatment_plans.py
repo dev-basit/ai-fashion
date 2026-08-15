@@ -4,7 +4,7 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase, get_user_id
+from app.ai.tools.utils import get_user_id
 from app.services import treatment_plans as tp_svc
 
 
@@ -14,7 +14,7 @@ def get_my_treatment_plans(
 ) -> str:
     """Get the current customer's own assigned treatment plans."""
     user_id = get_user_id(config)
-    data = tp_svc.list_plans(get_supabase(config), user_id, "customer")
+    data = tp_svc.list_plans(user_id, "customer")
     if not data:
         return "You have no treatment plans."
     return json.dumps(
@@ -30,7 +30,7 @@ def get_treatment_plans(
 ) -> str:
     """List treatment plans. Optionally filter by client."""
     user_id = get_user_id(config)
-    data = tp_svc.list_plans(get_supabase(config), user_id, "admin", client_id=client_id)
+    data = tp_svc.list_plans(user_id, "admin", client_id=client_id)
     if not data:
         return "No treatment plans found."
     return json.dumps(
@@ -50,7 +50,7 @@ def assign_treatment_plan(
     """Assign a treatment plan to a client. Staff and admin only."""
     try:
         body = {k: v for k, v in {"client_id": client_id, "template_id": template_id, "start_date": start_date, "notes": notes}.items() if v is not None}
-        tp_svc.create_plan(get_supabase(config), body)
+        tp_svc.create_plan(body)
         return f"Treatment plan assigned to client {client_id} successfully."
     except Exception as e:
         return f"Failed to assign plan: {e}"
@@ -61,7 +61,7 @@ def list_treatment_plan_templates(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all available treatment plan templates."""
-    data = tp_svc.list_templates(get_supabase(config))
+    data = tp_svc.list_templates()
     if not data:
         return "No treatment plan templates found."
     return json.dumps(
@@ -80,7 +80,7 @@ def create_treatment_plan_template(
     """Create a new treatment plan template. Admin only."""
     try:
         body = {k: v for k, v in {"name": name, "description": description, "duration_days": duration_days}.items() if v is not None}
-        tp_svc.create_template(get_supabase(config), body)
+        tp_svc.create_template(body)
         return f"Treatment plan template \"{name}\" created successfully."
     except Exception as e:
         return f"Failed to create template: {e}"

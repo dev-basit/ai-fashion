@@ -1,11 +1,8 @@
-from datetime import datetime, timezone
-from typing import Optional
-
-from supabase import Client
+from app.core.context import get_db
 
 
-def get_report(supabase: Client, report_type: str, from_: str, to: str) -> dict | list:
-    db = supabase
+def get_report(report_type: str, from_: str, to: str) -> dict | list:
+    db = get_db()
 
     if report_type == "revenue":
         return db.table("appointments").select("price, discount, status, starts_at").eq("status", "completed").eq("payment_status", "paid").gte("starts_at", from_).lte("starts_at", to).execute().data or []

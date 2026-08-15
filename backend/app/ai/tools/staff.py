@@ -4,7 +4,6 @@ from typing import Annotated, Optional
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import InjectedToolArg, tool
 
-from app.ai.tools.utils import get_supabase
 from app.services import staff as staff_svc
 
 
@@ -13,7 +12,7 @@ def list_staff(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all staff members with their profile IDs and specializations. Use this to find a staff profile ID when booking an appointment."""
-    data = staff_svc.list_staff(get_supabase(config))
+    data = staff_svc.list_staff()
     if not data:
         return "No staff members found."
     return json.dumps(
@@ -50,7 +49,7 @@ def update_staff(
     """Update a staff member's profile. Admin only."""
     try:
         body = {k: v for k, v in {"full_name": full_name, "phone": phone, "specializations": specializations, "is_active": is_active}.items() if v is not None}
-        staff_svc.update_staff(get_supabase(config), staff_id, body)
+        staff_svc.update_staff(staff_id, body)
         return f"Staff member {staff_id} updated successfully."
     except Exception as e:
         return f"Failed to update staff: {e}"

@@ -1,7 +1,4 @@
-from typing import Optional
-
-from supabase import Client
-
+from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_client
 from app.config.settings import settings
 
@@ -21,19 +18,21 @@ def increment_usage(user_id: str, today: str, current_count: int) -> None:
     ).execute()
 
 
-def list_conversations(supabase: Client, user_id: str) -> list:
+def list_conversations() -> list:
+    user = get_current_user()
     result = (
-        supabase.table("ai_conversations")
+        get_db().table("ai_conversations")
         .select("id, title, created_at, updated_at")
+        .eq("user_id", user.id)
         .order("updated_at", desc=True)
         .execute()
     )
     return result.data or []
 
 
-def get_conversation(supabase: Client, conversation_id: str) -> dict | None:
+def get_conversation(conversation_id: str) -> dict | None:
     result = (
-        supabase.table("ai_conversations")
+        get_db().table("ai_conversations")
         .select("id, title, created_at, updated_at")
         .eq("id", conversation_id)
         .maybe_single()
@@ -42,10 +41,11 @@ def get_conversation(supabase: Client, conversation_id: str) -> dict | None:
     return result.data
 
 
-def create_conversation(supabase: Client, user_id: str) -> dict:
+def create_conversation() -> dict:
+    user = get_current_user()
     result = (
-        supabase.table("ai_conversations")
-        .insert({"user_id": user_id})
+        get_db().table("ai_conversations")
+        .insert({"user_id": user.id})
         .select("id, title, created_at, updated_at")
         .single()
         .execute()
@@ -53,8 +53,8 @@ def create_conversation(supabase: Client, user_id: str) -> dict:
     return result.data
 
 
-def delete_conversation(supabase: Client, conversation_id: str) -> int:
-    result = supabase.table("ai_conversations").delete(count="exact").eq("id", conversation_id).execute()
+def delete_conversation(conversation_id: str) -> int:
+    result = get_db().table("ai_conversations").delete(count="exact").eq("id", conversation_id).execute()
     return result.count or 0
 
 
@@ -95,9 +95,9 @@ def verify_conversation_owner(conversation_id: str, user_id: str) -> bool:
     return data is not None
 
 
-def get_messages(supabase: Client, conversation_id: str) -> list:
+def get_messages(conversation_id: str) -> list:
     result = (
-        supabase.table("ai_messages")
+        get_db().table("ai_messages")
         .select("id, ai_conversation_id, role, content, created_at")
         .eq("ai_conversation_id", conversation_id)
         .order("created_at")
