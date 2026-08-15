@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_db_client
 from app.config.settings import settings
@@ -7,8 +9,9 @@ from app.schemas.ai import AiConversation, AiMessage
 def check_rate_limit(user_id: str, today: str) -> tuple[int, bool]:
     """Returns (call_count, is_limited)."""
     admin = get_admin_db_client()
-    row = admin.table("ai_usage").select("call_count").eq("user_id", user_id).eq("date", today).maybe_single().execute().data
-    count = row["call_count"] if row else 0
+    result = admin.table("ai_usage").select("call_count").eq("user_id", user_id).eq("date", today).maybe_single().execute()
+    row: dict[str, Any] | None = cast(dict[str, Any], result.data) if result is not None and result.data is not None else None
+    count: int = int(row["call_count"]) if row else 0
     return count, count >= settings.ai_daily_limit
 
 
@@ -61,7 +64,7 @@ def delete_conversation(conversation_id: str) -> int:
     return result.count or 0
 
 
-def load_history(conversation_id: str) -> list[dict]:
+def load_history(conversation_id: str) -> list[dict[str, Any]]:
     admin = get_admin_db_client()
     result = (
         admin.table("ai_messages")
@@ -70,7 +73,7 @@ def load_history(conversation_id: str) -> list[dict]:
         .order("created_at")
         .execute()
     )
-    return result.data or []
+    return cast(list[dict[str, Any]], result.data or [])
 
 
 def save_message(conversation_id: str, role: str, content: str) -> None:
@@ -85,7 +88,7 @@ def auto_title_conversation(conversation_id: str, first_message: str) -> None:
 
 
 def verify_conversation_owner(conversation_id: str, user_id: str) -> bool:
-    data = (
+    result = (
         get_admin_db_client()
         .table("ai_conversations")
         .select("id")
@@ -93,8 +96,8 @@ def verify_conversation_owner(conversation_id: str, user_id: str) -> bool:
         .eq("user_id", user_id)
         .maybe_single()
         .execute()
-        .data
     )
+    data = result.data if result is not None else None
     return data is not None
 
 
@@ -109,7 +112,7 @@ def get_messages(conversation_id: str) -> list:
     return result.data or []
 
 
-def match_documents(embedding: list[float], user_role: str, limit: int = 5) -> list[dict]:
+def match_documents(embedding: list[float], user_role: str, limit: int = 5) -> list[dict[str, Any]]:
     result = get_admin_db_client().rpc("match_documents", {
         "query_embedding": embedding,
         "match_threshold": 0.5,
@@ -117,4 +120,4 @@ def match_documents(embedding: list[float], user_role: str, limit: int = 5) -> l
         "user_role": user_role,
     }).execute()
     data = result.data if result is not None else None
-    return data if isinstance(data, list) else []
+    return cast(list[dict[str, Any]], data) if isinstance(data, list) else []

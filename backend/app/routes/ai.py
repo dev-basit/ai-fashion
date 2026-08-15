@@ -52,7 +52,7 @@ async def ai_chat(body: dict):
 
     profile = db.table("profiles").select("role").eq("id", user.id).single().execute()
     profile_data = profile.data if profile is not None else None
-    user_role: str = profile_data.get("role", "customer") if isinstance(profile_data, dict) else "customer"
+    user_role: str = str((profile_data.get("role") or "customer") if isinstance(profile_data, dict) else "customer")
 
     today = date.today().isoformat()
     call_count, is_limited = ai_service.check_rate_limit(user.id, today)
@@ -91,8 +91,9 @@ async def ai_chat(body: dict):
                 config={"configurable": {"access_token": token, "user_id": user.id, "timezone": timezone_str}},
                 stream_mode="messages",
             ):
-                if meta.get("langgraph_node") == "agent":
-                    content = chunk.content
+                meta_dict: dict = meta if isinstance(meta, dict) else {}
+                if meta_dict.get("langgraph_node") == "agent":
+                    content = getattr(chunk, "content", None)
                     if isinstance(content, str) and content:
                         full_response += content
                         yield content

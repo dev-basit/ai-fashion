@@ -39,7 +39,7 @@ def create_client(
     """Create a new customer account. Admin only."""
     try:
         data = clients_svc.create_client({"email": email, "full_name": full_name, "password": password, "phone": phone})
-        return f"Client \"{data.get('full_name')}\" created with email {email}."
+        return f"Client \"{data.full_name}\" created with email {email}."
     except Exception as e:
         return f"Failed to create client: {e}"
 

@@ -14,13 +14,7 @@ def get_my_profile(
 ) -> str:
     """Get the current logged-in user's own profile details (name, email, phone, role, etc.)."""
 
-    class _User:
-        def __init__(self, user_id: str):
-            self.id = user_id
-            self.email = None
-
-    user_id = get_user_id(config)
-    profile = profiles_svc.get_me(_User(user_id))
+    profile = profiles_svc.get_me()
     return json.dumps(profile, indent=2)
 
 

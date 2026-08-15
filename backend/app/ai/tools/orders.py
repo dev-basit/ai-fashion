@@ -25,8 +25,7 @@ def get_my_orders(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List the current customer's own orders with item details and status."""
-    user_id = get_user_id(config)
-    data = orders_svc.list_orders(user_id, "customer")
+    data = orders_svc.list_orders()
     if not data:
         return "You have no orders."
     return json.dumps([_format_order(o) for o in data[:limit]], indent=2)
@@ -41,7 +40,7 @@ def get_order_status(
     data = orders_svc.get_order(order_id)
     if not data:
         return "Order not found."
-    return json.dumps(_format_order(data), indent=2)
+    return json.dumps(_format_order(data.model_dump()), indent=2)
 
 
 @tool
@@ -50,8 +49,7 @@ def get_all_orders(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List all orders across all clients. Optionally filter by a specific client."""
-    user_id = get_user_id(config)
-    data = orders_svc.list_orders(user_id, "admin", client_id=client_id)
+    data = orders_svc.list_orders(client_id=client_id)
     if not data:
         return "No orders found."
     return json.dumps(

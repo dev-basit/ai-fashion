@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import get_admin_auth
@@ -26,7 +28,8 @@ def update_profile(profile_id: str, body: dict):
     user = get_current_user()
     if profile_id != user.id:
         me = get_db().table("profiles").select("role").eq("id", user.id).single().execute()
-        if not me.data or me.data.get("role") != "admin":
+        me_data: dict[str, Any] = cast(dict[str, Any], me.data) if me is not None and me.data else {}
+        if not me_data or me_data.get("role") != "admin":
             raise HTTPException(status_code=403, detail="Forbidden")
     data = profiles_svc.update_profile(profile_id, body)
     if not data:

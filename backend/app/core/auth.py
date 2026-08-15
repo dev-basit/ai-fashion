@@ -10,3 +10,7 @@ def require_admin():
     data = result.data if result is not None else None
     if not isinstance(data, dict) or data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Forbidden")
+
+
+def get_admin_auth():
+    require_admin()

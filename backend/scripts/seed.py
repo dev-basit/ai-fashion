@@ -43,10 +43,7 @@ def seed_users() -> list[dict]:
             print(f"  Removed existing {u['email']}")
 
         user_resp = supabase.auth.admin.create_user(
-            email=u["email"],
-            password="1234qwer",
-            email_confirm=True,
-            user_metadata={"full_name": u["name"]},
+            {"email": u["email"], "password": "1234qwer", "email_confirm": True, "user_metadata": {"full_name": u["name"]}}
         )
         if user_resp.user is None:
             raise ValueError(f"Failed to create user {u['email']}")
@@ -221,7 +218,7 @@ def main() -> None:
     print("║  Glow By Miral — DB Seeder    ║")
     print("╚═══════════════════════════════╝")
 
-    supabase = get_admin_client()
+    supabase = get_admin_db_client()
     print(f"  Supabase: {supabase.url}")
 
     users = seed_users()

@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from app.core.context import get_db, get_current_user
 from app.core.supabase import get_admin_db_client
 from app.schemas.profiles import Profile
@@ -12,7 +14,8 @@ def get_me() -> dict:
         .single()
         .execute()
     )
-    return {**(result.data or {}), "email": user.email}
+    profile_data: dict[str, Any] = cast(dict[str, Any], result.data or {})
+    return {**profile_data, "email": user.email}
 
 
 def list_profiles() -> list:

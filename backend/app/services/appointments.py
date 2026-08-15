@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.context import get_db
 from app.core.notify import notify_admins, notify_user_and_admins
@@ -140,7 +140,7 @@ def get_stats() -> dict:
         .execute()
     ).count or 0
 
-    revenue_rows = (
+    _rev_result = (
         get_db().table("appointments")
         .select("price, discount")
         .eq("status", "completed")
@@ -148,7 +148,8 @@ def get_stats() -> dict:
         .gte("starts_at", start)
         .lte("starts_at", end)
         .execute()
-    ).data or []
+    )
+    revenue_rows: list[dict[str, Any]] = cast(list[dict[str, Any]], _rev_result.data or [])
 
     revenue = sum((r.get("price", 0) or 0) - (r.get("discount", 0) or 0) for r in revenue_rows)
     return {"todayCount": today_count, "pendingCount": pending_count, "todayRevenue": revenue}

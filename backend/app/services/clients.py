@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.context import get_db
 from app.core.supabase import get_admin_db_client
@@ -78,7 +78,8 @@ def get_client_history(client_id: str) -> dict:
 
 def get_appointment_counts() -> dict:
     db = get_db()
-    rows = db.table("appointments").select("client_id").execute().data or []
+    _rows_res = db.table("appointments").select("client_id").execute()
+    rows: list[dict[str, Any]] = cast(list[dict[str, Any]], _rows_res.data or [])
     counts: dict[str, int] = {}
     for row in rows:
         cid = row["client_id"]

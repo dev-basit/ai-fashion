@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.supabase import get_admin_db_client
 
@@ -9,18 +9,9 @@ def notify_user_and_admins(
     exclude_id: Optional[str] = None,
 ) -> None:
     admin = get_admin_db_client()
-    admin_ids = [
-        r["id"]
-        for r in (
-            admin.table("profiles")
-            .select("id")
-            .eq("role", "admin")
-            .eq("is_active", True)
-            .execute()
-            .data
-            or []
-        )
-    ]
+    raw = admin.table("profiles").select("id").eq("role", "admin").eq("is_active", True).execute()
+    rows: list[dict[str, Any]] = cast(list[dict[str, Any]], raw.data or [])
+    admin_ids = [r["id"] for r in rows]
     ids = list(
         dict.fromkeys(
             i

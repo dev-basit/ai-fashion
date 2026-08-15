@@ -35,7 +35,6 @@ def book_appointment(
     """Book a new appointment for the current customer."""
     try:
         data = appts_svc.create_appointment(
-            get_user_id(config),
             {"service_id": service_id, "staff_profile_id": staff_profile_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
         )
         return f"Appointment booked! ID: {data['id']}, starts at: {data['starts_at']}, status: {data['status']}."
@@ -55,7 +54,6 @@ def book_appointment_for_client(
     """Book an appointment on behalf of a client. Requires client_id, service_id, and starts_at."""
     try:
         data = appts_svc.create_appointment(
-            get_user_id(config),
             {"client_id": client_id, "service_id": service_id, "staff_profile_id": staff_profile_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
         )
         return f"Appointment booked! ID: {data['id']}, starts at: {data['starts_at']}, status: {data['status']}."

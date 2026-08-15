@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -46,7 +46,8 @@ def list_plans(
 def create_plan(body: dict):
     user = get_current_user()
     profile = get_db().table("profiles").select("role").eq("id", user.id).single().execute()
-    role = (profile.data or {}).get("role", "customer")
+    profile_dict: dict[str, Any] = cast(dict[str, Any], profile.data) if profile is not None and profile.data else {}
+    role: str = str(profile_dict.get("role") or "customer")
     if role == "customer":
         raise HTTPException(status_code=403, detail="Forbidden")
     data = tp_svc.create_plan(body)

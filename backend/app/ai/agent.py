@@ -40,7 +40,8 @@ async def agent(state: AgentState, config: RunnableConfig | None = None) -> dict
     months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
     current_dt = f"{weekdays[local_now.weekday()]}, {months[local_now.month - 1]} {local_now.day}, {local_now.year}, {local_now.strftime('%I:%M %p')} ({timezone_str})"
 
-    offset_seconds = local_now.utcoffset().total_seconds() if local_now.utcoffset() else 0
+    utc_offset = local_now.utcoffset()
+    offset_seconds = utc_offset.total_seconds() if utc_offset is not None else 0
     sign = "+" if offset_seconds >= 0 else "-"
     offset_h, offset_m = divmod(abs(int(offset_seconds)) // 60, 60)
     iso_offset = f"{sign}{offset_h:02d}:{offset_m:02d}"

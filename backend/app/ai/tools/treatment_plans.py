@@ -13,8 +13,7 @@ def get_my_treatment_plans(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """Get the current customer's own assigned treatment plans."""
-    user_id = get_user_id(config)
-    data = tp_svc.list_plans(user_id, "customer")
+    data = tp_svc.list_plans()
     if not data:
         return "You have no treatment plans."
     return json.dumps(
@@ -29,8 +28,7 @@ def get_treatment_plans(
     config: Annotated[RunnableConfig, InjectedToolArg] = None,
 ) -> str:
     """List treatment plans. Optionally filter by client."""
-    user_id = get_user_id(config)
-    data = tp_svc.list_plans(user_id, "admin", client_id=client_id)
+    data = tp_svc.list_plans(client_id=client_id)
     if not data:
         return "No treatment plans found."
     return json.dumps(

@@ -25,7 +25,7 @@ def update_settings(
 ) -> str:
     """Update a business setting. Admin only. Confirm with admin before updating."""
     try:
-        settings_svc.update_setting(get_user_id(config), key, value)
+        settings_svc.update_setting(key, value)
         return "Business settings updated successfully."
     except Exception as e:
         return f"Failed to update settings: {e}"

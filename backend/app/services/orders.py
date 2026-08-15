@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from app.core.context import get_db, get_current_user
 from app.core.notify import notify_user_and_admins
@@ -56,7 +56,8 @@ def create_order(body: dict) -> dict:
 
     admin = get_admin_db_client()
     product_ids = [i["product_id"] for i in items]
-    products = admin.table("products").select("id, stock_quantity").in_("id", product_ids).execute().data or []
+    _prod_res = admin.table("products").select("id, stock_quantity").in_("id", product_ids).execute()
+    products: list[dict[str, Any]] = cast(list[dict[str, Any]], _prod_res.data or [])
     for item in items:
         current = next((p["stock_quantity"] for p in products if p["id"] == item["product_id"]), 0)
         admin.table("products").update({"stock_quantity": max(0, current - item["quantity"])}).eq("id", item["product_id"]).execute()
@@ -83,7 +84,8 @@ def create_order(body: dict) -> dict:
 
 def update_order(order_id: str, body: dict) -> Order | None:
     db = get_db()
-    existing = db.table("orders").select("status, client_id").eq("id", order_id).single().execute().data or {}
+    _existing_res = db.table("orders").select("status, client_id").eq("id", order_id).single().execute()
+    existing: dict[str, Any] = cast(dict[str, Any], _existing_res.data or {})
     result = db.table("orders").update(body).eq("id", order_id).select().single().execute()
 
     if result is None or result.data is None:
