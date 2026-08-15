@@ -723,3 +723,5 @@ Tools call service functions directly — no HTTP round-trip. The RLS-scoped `ge
 - **AI knowledge base re-ingestion**: editing `backend/knowledge-base.md` has no effect until `npm run ingest-kb` re-embeds all chunks.
 - **Backend `salon_services`**: The Python module for services is named `salon_services` (not `services`) to avoid shadowing Python's `services` namespace.
 - **`useCreateConversation` hook**: in `useChat.ts` — wraps `chatService.getOrCreateDirectConversation`. Use this in components, never call `chatService` directly.
+- **supabase-py v2 storage API**: `create_bucket(id, options={...})` not `create_bucket(id, {...})`; upload `file_options` uses `"content-type"` (kebab) and `"upsert": "true"` (string); `get_public_url()` returns `str` not a dict; `list_users()` returns a plain list not an object with `.users`.
+- **Seed script requires venv**: `backend/supabase/` shadows the `supabase` package name for system Python. Always run `venv/bin/python -m scripts.seed` or activate the venv first.
