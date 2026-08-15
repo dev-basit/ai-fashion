@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoading } from "@/components/common/LoadingSpinner";
 import type { Appointment } from "@/types/database";
 
-export function AdminDashboard() {
+export function AdminDashboard({ userId }: { userId: string }) {
   const [preset, setPreset] = useState<DatePreset>("today");
   const [range, setRange] = useState<DateRange>(() => computeDateRange("today"));
 

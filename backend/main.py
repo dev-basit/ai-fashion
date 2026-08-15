@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.config.config import config
 from app.core.context import _db_var, _user_var, _token_var
-from app.core.supabase import get_admin_client, get_user_client
+from app.core.supabase import get_admin_db_client, get_db_client
 from app.routes import health
 from app.routes import me, profiles
 from app.routes import salon_services, products, clients, staff
@@ -31,13 +31,13 @@ async def auth_middleware(request: Request, call_next):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     token = auth_header.removeprefix("Bearer ")
-    response = get_admin_client().auth.get_user(token)
+    response = get_admin_db_client().auth.get_user(token)
     if not response.user:
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     t1 = _user_var.set(response.user)
     t2 = _token_var.set(token)
-    t3 = _db_var.set(get_user_client(token))
+    t3 = _db_var.set(get_db_client(token))
     try:
         return await call_next(request)
     finally:

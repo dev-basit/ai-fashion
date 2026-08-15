@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from app.ai.models import embeddings
-from app.core.supabase import get_admin_client
+from app.core.supabase import get_admin_db_client
 
 KB_PATH = Path(__file__).resolve().parents[1] / "knowledge-base.md"
 
@@ -62,7 +62,7 @@ def main() -> None:
     for s in sections:
         print(f"  [{','.join(s['roles'])}] {s['section']}")
 
-    supabase = get_admin_client()
+    supabase = get_admin_db_client()
 
     delete_res = supabase.table("document_chunks").delete().neq("id", 0).execute()
     if getattr(delete_res, "error", None):

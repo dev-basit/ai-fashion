@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { config } from "./config/config";
+import { config as env } from "./config/config";
 
 const PUBLIC_ROUTES = ["/login", "/forgot-password"];
 const DASHBOARD_ROUTES = ["/dashboard"];
@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
 
   let response = NextResponse.next({ request: { headers: request.headers } });
 
-  const supabase = createServerClient(config.supabase.url, config.supabase.publishableKey, {
+  const supabase = createServerClient(env.supabase.url, env.supabase.publishableKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
