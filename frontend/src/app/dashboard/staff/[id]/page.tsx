@@ -1,22 +1,23 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams, notFound } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useStaffMember } from "@/hooks/useStaff";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { StaffProfileView } from "@/components/staff/StaffProfileView";
 
-export default async function StaffMemberPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { user, profile, supabase } = await getCurrentUserDetails();
+export default function StaffMemberPage() {
+  const { id } = useParams<{ id: string }>();
+  const { user, profile, isLoading } = useAuth();
+  const { data: staffProfile, isLoading: staffLoading } = useStaffMember(id);
 
-  const { data: staffProfile } = await supabase
-    .from("staff_profiles")
-    .select("*, profiles(*)")
-    .eq("id", id)
-    .single();
-  if (!staffProfile) notFound();
+  if (isLoading || staffLoading) return <LoadingSpinner />;
+  if (!staffProfile) return notFound();
 
   return (
     <StaffProfileView
       staffProfile={staffProfile}
-      isOwnProfile={staffProfile.profile_id === user.id}
+      isOwnProfile={staffProfile.profile_id === user!.id}
       role={profile?.role ?? "staff"}
     />
   );

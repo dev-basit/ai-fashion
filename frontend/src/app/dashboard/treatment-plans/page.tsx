@@ -1,8 +1,13 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { TreatmentPlansView } from "@/components/treatment-plans/TreatmentPlansView";
 
-export default async function TreatmentPlansPage() {
-  const { user, profile } = await getCurrentUserDetails();
+export default function TreatmentPlansPage() {
+  const { user, profile, isLoading } = useAuth();
 
-  return <TreatmentPlansView role={profile?.role ?? "customer"} userId={user.id} />;
+  if (isLoading) return <LoadingSpinner />;
+
+  return <TreatmentPlansView role={profile?.role ?? "customer"} userId={user!.id} />;
 }

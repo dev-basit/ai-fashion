@@ -1,19 +1,23 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams, notFound } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useClient } from "@/hooks/useClients";
+import { useStaffByProfile } from "@/hooks/useStaff";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ClientProfileView } from "@/components/clients/ClientProfileView";
 
-export default async function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { user, profile, supabase } = await getCurrentUserDetails();
+export default function ClientProfilePage() {
+  const { id } = useParams<{ id: string }>();
+  const { user, profile, isLoading } = useAuth();
+  const { data: client, isLoading: clientLoading } = useClient(id);
+  const { data: staffData } = useStaffByProfile(
+    profile?.role === "staff" || profile?.role === "admin" ? (user?.id ?? null) : null,
+  );
+  const staffProfileId = staffData?.[0]?.id;
 
-  const { data: client } = await supabase.from("profiles").select("*").eq("id", id).single();
-  if (!client) notFound();
-
-  let staffProfileId: string | undefined;
-  if (profile?.role === "staff" || profile?.role === "admin") {
-    const { data: sp } = await supabase.from("staff_profiles").select("id").eq("profile_id", user.id).single();
-    staffProfileId = sp?.id ?? undefined;
-  }
+  if (isLoading || clientLoading) return <LoadingSpinner />;
+  if (!client) return notFound();
 
   return <ClientProfileView client={client} role={profile?.role ?? "staff"} staffProfileId={staffProfileId} />;
 }

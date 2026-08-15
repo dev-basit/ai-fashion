@@ -1,8 +1,13 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ProfileView } from "@/components/profile/ProfileView";
 
-export default async function ProfilePage() {
-  const { user, profile } = await getCurrentUserDetails();
+export default function ProfilePage() {
+  const { user, profile, isLoading } = useAuth();
 
-  return <ProfileView profile={profile} email={user.email ?? ""} />;
+  if (isLoading) return <LoadingSpinner />;
+
+  return <ProfileView profile={profile} email={user!.email ?? ""} />;
 }

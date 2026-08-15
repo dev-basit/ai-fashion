@@ -1,14 +1,16 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { useStaffByProfile } from "@/hooks/useStaff";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsultationView } from "@/components/consultation/ConsultationView";
 
-export default async function ConsultationPage() {
-  const { user, profile, supabase } = await getCurrentUserDetails();
+export default function ConsultationPage() {
+  const { user, profile, isLoading } = useAuth();
+  const { data: staffData } = useStaffByProfile(profile?.role === "staff" ? (user?.id ?? null) : null);
+  const staffProfileId = staffData?.[0]?.id;
 
-  let staffProfileId: string | undefined;
-  if (profile?.role === "staff") {
-    const { data: sp } = await supabase.from("staff_profiles").select("id").eq("profile_id", user.id).single();
-    staffProfileId = sp?.id;
-  }
+  if (isLoading) return <LoadingSpinner />;
 
-  return <ConsultationView role={profile?.role ?? "staff"} userId={user.id} staffProfileId={staffProfileId} />;
+  return <ConsultationView role={profile?.role ?? "staff"} userId={user!.id} staffProfileId={staffProfileId} />;
 }

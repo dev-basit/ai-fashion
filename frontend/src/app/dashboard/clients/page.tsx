@@ -1,8 +1,13 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ClientsView } from "@/components/clients/ClientsView";
 
-export default async function ClientsPage() {
-  const { profile } = await getCurrentUserDetails();
+export default function ClientsPage() {
+  const { profile, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingSpinner />;
 
   return <ClientsView role={profile?.role ?? "staff"} />;
 }

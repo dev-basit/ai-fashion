@@ -1,17 +1,18 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams, notFound } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { useProduct } from "@/hooks/useProducts";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ProductDetailView } from "@/components/products/ProductDetailView";
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { profile, supabase } = await getCurrentUserDetails();
+export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { profile, isLoading } = useAuth();
+  const { data: product, isLoading: productLoading } = useProduct(id);
 
-  const { data: product } = await supabase
-    .from("products")
-    .select("*, product_categories(*)")
-    .eq("id", id)
-    .single();
-  if (!product) notFound();
+  if (isLoading || productLoading) return <LoadingSpinner />;
+  if (!product) return notFound();
 
   return (
     <ProductDetailView

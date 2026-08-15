@@ -1,14 +1,16 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { useStaffByProfile } from "@/hooks/useStaff";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AppointmentsView } from "@/components/appointments/AppointmentsView";
 
-export default async function AppointmentsPage() {
-  const { user, profile, supabase } = await getCurrentUserDetails();
+export default function AppointmentsPage() {
+  const { user, profile, isLoading } = useAuth();
+  const { data: staffData } = useStaffByProfile(profile?.role === "staff" ? (user?.id ?? null) : null);
+  const staffProfileId = staffData?.[0]?.id;
 
-  let staffProfileId: string | undefined;
-  if (profile?.role === "staff") {
-    const { data: sp } = await supabase.from("staff_profiles").select("id").eq("profile_id", user.id).single();
-    staffProfileId = sp?.id;
-  }
+  if (isLoading) return <LoadingSpinner />;
 
-  return <AppointmentsView role={profile?.role ?? "customer"} userId={user.id} staffProfileId={staffProfileId} />;
+  return <AppointmentsView role={profile?.role ?? "customer"} userId={user!.id} staffProfileId={staffProfileId} />;
 }

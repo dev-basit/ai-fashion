@@ -1,10 +1,15 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Header } from "@/components/dashboard/Header";
 import type { UserRole } from "@/types/database";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { profile } = await getCurrentUserDetails();
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { profile, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

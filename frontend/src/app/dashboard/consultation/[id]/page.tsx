@@ -1,13 +1,15 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { ConsultationRecordView } from "@/components/consultation/ConsultationRecordView";
 
-export default async function ConsultationRecordPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { profile, supabase } = await getCurrentUserDetails();
+export default function ConsultationRecordPage() {
+  const { id } = useParams<{ id: string }>();
+  const { profile, isLoading } = useAuth();
 
-  const { data: record } = await supabase.from("consultation_records").select("id").eq("id", id).single();
-  if (!record) notFound();
+  if (isLoading) return <LoadingSpinner />;
 
   return <ConsultationRecordView recordId={id} role={profile?.role ?? "customer"} />;
 }

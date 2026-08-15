@@ -1,19 +1,15 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { AppointmentDetail } from "@/components/appointments/AppointmentDetail";
 
-export default async function AppointmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { profile, supabase } = await getCurrentUserDetails();
+export default function AppointmentDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { profile, isLoading } = useAuth();
 
-  const { data: appointment } = await supabase
-    .from("appointments")
-    .select(
-      "*, services(id, name, duration_mins, base_price), profiles!client_id(id, full_name, avatar_url, phone), staff_profiles(id, profiles(id, full_name))",
-    )
-    .eq("id", id)
-    .single();
-  if (!appointment) notFound();
+  if (isLoading) return <LoadingSpinner />;
 
   return <AppointmentDetail appointmentId={id} role={profile?.role ?? "customer"} />;
 }

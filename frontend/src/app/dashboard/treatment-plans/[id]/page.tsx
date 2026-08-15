@@ -1,13 +1,15 @@
-import { notFound } from "next/navigation";
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { TreatmentPlanProgress } from "@/components/treatment-plans/TreatmentPlanProgress";
 
-export default async function TreatmentPlanDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const { profile, supabase } = await getCurrentUserDetails();
+export default function TreatmentPlanDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { profile, isLoading } = useAuth();
 
-  const { data: plan } = await supabase.from("client_treatment_plans").select("id").eq("id", id).single();
-  if (!plan) notFound();
+  if (isLoading) return <LoadingSpinner />;
 
   return <TreatmentPlanProgress planId={id} role={profile?.role ?? "customer"} />;
 }

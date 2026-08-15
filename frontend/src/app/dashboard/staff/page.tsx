@@ -1,8 +1,13 @@
-import { getCurrentUserDetails } from "@/lib/auth";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { StaffView } from "@/components/staff/StaffView";
 
-export default async function StaffPage() {
-  await getCurrentUserDetails();
+export default function StaffPage() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) return <LoadingSpinner />;
 
   return <StaffView />;
 }
