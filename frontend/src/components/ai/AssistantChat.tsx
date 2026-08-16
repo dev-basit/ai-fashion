@@ -42,12 +42,17 @@ export function AssistantChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync fetched messages into local state (initial load + after conversation switch)
+  // Use a ref so the sync effect doesn't re-run just because isStreaming flipped.
+  // Without this, setIsStreaming(false) would trigger the effect with stale fetchedMessages=[],
+  // wiping local state before the server refetch completes.
+  const isStreamingRef = useRef(false);
+  isStreamingRef.current = isStreaming;
+
+  // Sync fetched messages into local state (initial load + after conversation switch + after refetch)
   useEffect(() => {
-    if (!isStreaming) {
-      setLocalMessages(fetchedMessages);
-    }
-  }, [fetchedMessages, isStreaming]);
+    if (isStreamingRef.current) return;
+    setLocalMessages(fetchedMessages);
+  }, [fetchedMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -180,6 +185,7 @@ export function AssistantChat() {
         setIsStreaming(false);
         inputRef.current?.focus();
         qc.invalidateQueries({ queryKey: QK.aiConversations() });
+        qc.invalidateQueries({ queryKey: QK.aiMessages(activeConversationId) });
       }
     },
     [input, isStreaming, isRateLimited, activeConversationId, localMessages.length, qc],
