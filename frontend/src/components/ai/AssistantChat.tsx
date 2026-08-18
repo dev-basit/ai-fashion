@@ -22,13 +22,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { config } from "@/config/config";
 
+const EMPTY_MESSAGES: AIChatMessage[] = [];
+
 export function AssistantChat() {
   const { user } = useAuth();
   const { activeConversationId, setActiveConversationId } = useAIStore();
   const qc = useQueryClient();
 
   const { data: conversations = [], isLoading: isLoadingConvs } = useAIConversations();
-  const { data: fetchedMessages = [], isLoading: isLoadingMessages } = useAIMessages(activeConversationId);
+  const { data: fetchedMessages = EMPTY_MESSAGES, isLoading: isLoadingMessages } =
+    useAIMessages(activeConversationId);
   const createConversation = useCreateAIConversation();
   const deleteConversation = useDeleteAIConversation();
 

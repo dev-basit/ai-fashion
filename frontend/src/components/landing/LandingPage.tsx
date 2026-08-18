@@ -293,7 +293,7 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28">
+      <section className="relative overflow-hidden pt-28 pb-20 sm:pt-30 sm:pb-28">
         {/* Dot grid */}
         <div
           className="pointer-events-none absolute inset-0 block dark:hidden"
