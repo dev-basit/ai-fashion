@@ -1,6 +1,6 @@
 export const SUGGESTED_QUESTIONS = [
-  "What are your business hours?",
-  "How do I cancel an appointment?",
-  "What is your refund policy?",
+  "What you can do for me",
   "How do I book an appointment?",
+  "What are your business hours?",
+  "What is your refund policy?",
 ];
