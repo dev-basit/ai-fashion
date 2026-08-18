@@ -123,6 +123,35 @@ def create_treatment_plan_template(
         return f"Failed to create template: {e}"
 
 
-customer_treatment_plan_tools = [get_my_treatment_plans, list_treatment_plan_templates]
-staff_treatment_plan_tools = [*customer_treatment_plan_tools, get_treatment_plans, assign_treatment_plan]
+@tool
+def update_treatment_plan_status(
+    plan_id: Annotated[str, "UUID of the treatment plan to update"],
+    status: Annotated[str, "New status: active, completed, cancelled, on_hold"],
+) -> str:
+    """Update the status of a treatment plan.
+
+    Valid statuses: active, completed, cancelled, on_hold"""
+    try:
+        if not plan_id:
+            return "❌ Error: plan_id is required."
+        if not status:
+            return "❌ Error: status is required (active, completed, cancelled, on_hold)."
+
+        valid_statuses = ["active", "completed", "cancelled", "on_hold"]
+        status_lower = status.lower().strip()
+        if status_lower not in valid_statuses:
+            return f"❌ Error: Invalid status '{status}'. Must be: {', '.join(valid_statuses)}"
+
+        # Update the plan
+        updated = tp_svc.update_plan(plan_id, {"status": status_lower})
+        if not updated:
+            return f"❌ Treatment plan '{plan_id}' not found."
+
+        return f"✓ Treatment plan status updated to '{status_lower}'"
+    except Exception as e:
+        return f"❌ Failed to update plan: {str(e)}"
+
+
+customer_treatment_plan_tools = [get_my_treatment_plans, ]
+staff_treatment_plan_tools = [*customer_treatment_plan_tools, list_treatment_plan_templates, get_treatment_plans, assign_treatment_plan, update_treatment_plan_status]
 admin_treatment_plan_tools = [*staff_treatment_plan_tools, create_treatment_plan_template]
