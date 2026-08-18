@@ -77,8 +77,9 @@ def create_appointment(body: dict) -> dict:
     if not ends_at:
         raise ValueError("ends_at is required")
 
+    db = get_admin_db_client() if role in ("staff", "admin") else get_db()
     result = (
-        get_db().table("appointments")
+        db.table("appointments")
         .insert({**body, "client_id": client_id, "ends_at": ends_at, "price": price})
         .select()
         .execute()

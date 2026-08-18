@@ -5,7 +5,7 @@ from app.ai.tools.products import shared_product_tools, admin_product_tools
 from app.ai.tools.orders import customer_order_tools, staff_order_tools, admin_order_tools
 from app.ai.tools.clients import staff_client_tools, admin_client_tools
 from app.ai.tools.staff import shared_staff_tools, admin_staff_tools
-from app.ai.tools.consultation import customer_consultation_tools, staff_consultation_tools
+from app.ai.tools.consultation import customer_consultation_tools, staff_consultation_tools, admin_consultation_tools
 from app.ai.tools.treatment_plans import customer_treatment_plan_tools, staff_treatment_plan_tools, admin_treatment_plan_tools
 from app.ai.tools.settings import settings_tools
 from app.ai.tools.reports import reports_tools
@@ -41,7 +41,7 @@ admin_tools = [
     *admin_staff_tools,
     *admin_order_tools,
     *admin_client_tools,
-    *staff_consultation_tools,
+    *admin_consultation_tools,
     *admin_treatment_plan_tools,
     *settings_tools,
     *reports_tools,

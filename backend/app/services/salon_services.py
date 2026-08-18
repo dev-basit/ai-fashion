@@ -2,14 +2,15 @@ from app.core.context import get_db
 from app.schemas.salon_services import Service, ServiceCategory, ServiceVariant
 
 
-def list_services() -> list:
-    result = (
+def list_services(category_id: str | None = None) -> list:
+    query = (
         get_db().table("services")
         .select("*, service_categories(id, name), service_variants(*)")
         .eq("is_active", True)
-        .order("sort_order")
-        .execute()
     )
+    if category_id:
+        query = query.eq("category_id", category_id)
+    result = query.order("sort_order").execute()
     return result.data or []
 
 

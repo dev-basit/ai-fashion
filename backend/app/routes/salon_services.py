@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
+from typing import Optional
 from app.services import salon_services as svc
 
 router = APIRouter(tags=["services"])
 
 
 @router.get("")
-def list_services():
-    return {"data": svc.list_services()}
+def list_services(categoryId: Optional[str] = Query(None)):
+    return {"data": svc.list_services(category_id=categoryId)}
 
 
 @router.post("")

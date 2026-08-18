@@ -43,13 +43,24 @@ def book_appointment_for_client(
     client_id: Annotated[str, "UUID of the client profile — use get_clients to find it"],
     service_id: Annotated[str, "UUID of the service to book — use list_services to find it"],
     starts_at: Annotated[str, "Start datetime in ISO 8601 format"],
-    staff_profile_id: Annotated[Optional[str], "Staff profile UUID"] = None,
+    staff_profile_id: Annotated[Optional[str], "Staff profile UUID. If you are staff, use your own staff profile ID"] = None,
     notes: Annotated[Optional[str], "Special notes or requests"] = None,
 ) -> str:
-    """Book an appointment on behalf of a client. Requires client_id, service_id, and starts_at."""
+    """Book an appointment on behalf of a client. Requires client_id, service_id, and starts_at. If you are staff, automatically uses your staff profile ID."""
     try:
+        from app.core.context import get_current_user, get_db
+
+        user = get_current_user()
+        user_role = get_db().table("profiles").select("role").eq("id", user.id).maybe_single().execute()
+        role = (user_role.data or {}).get("role") if user_role else None
+
+        assigned_staff_id = staff_profile_id
+        if role == "staff" and not assigned_staff_id:
+            sp = get_db().table("staff_profiles").select("id").eq("profile_id", user.id).maybe_single().execute()
+            assigned_staff_id = (sp.data or {}).get("id") if sp else None
+
         data = appts_svc.create_appointment(
-            {"client_id": client_id, "service_id": service_id, "staff_profile_id": staff_profile_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
+            {"client_id": client_id, "service_id": service_id, "staff_profile_id": assigned_staff_id, "starts_at": starts_at, "notes": notes, "status": "pending", "payment_status": "unpaid", "price": 0, "discount": 0},
         )
         return f"Appointment booked! ID: {data['id']}, starts at: {data['starts_at']}, status: {data['status']}."
     except Exception as e:
