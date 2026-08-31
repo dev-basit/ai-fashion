@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { appointmentsService, type AppointmentFilters } from "@/services/appointments.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { Appointment, AppointmentStatus } from "@/types/database";
 import type { Database } from "@/types/supabase";
 
@@ -43,12 +45,19 @@ export function useAppointmentProducts(appointmentId: string | null) {
 
 export function useCreateAppointment() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async (payload: Partial<Appointment>) => {
       const { data, error } = await appointmentsService.create(payload);
       if (error) throw new Error(error.message);
       return data as Appointment;
     },
+    getQueueEntry: (payload) => ({
+      method: "POST",
+      url: API_ROUTES.appointments,
+      payload,
+      label: "Appointment",
+      invalidateKeys: [QK.appointments()],
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.appointments() });
     },
@@ -57,12 +66,19 @@ export function useCreateAppointment() {
 
 export function useUpdateAppointment() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, ...payload }: Partial<Appointment> & { id: string }) => {
       const { data, error } = await appointmentsService.update(id, payload);
       if (error) throw new Error(error.message);
       return data as Appointment;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.appointmentById(id),
+      payload,
+      label: "Appointment",
+      invalidateKeys: [QK.appointments(), QK.appointment(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.appointments() });
       qc.invalidateQueries({ queryKey: QK.appointment(id) });
@@ -72,12 +88,19 @@ export function useUpdateAppointment() {
 
 export function useUpdateAppointmentStatus() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, status }: { id: string; status: AppointmentStatus }) => {
       const { data, error } = await appointmentsService.updateStatus(id, status);
       if (error) throw new Error(error.message);
       return data as Appointment;
     },
+    getQueueEntry: ({ id, status }) => ({
+      method: "PATCH",
+      url: API_ROUTES.appointmentById(id),
+      payload: { status },
+      label: "Appointment Status",
+      invalidateKeys: [QK.appointments(), QK.appointment(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.appointments() });
       qc.invalidateQueries({ queryKey: QK.appointment(id) });
@@ -87,7 +110,7 @@ export function useUpdateAppointmentStatus() {
 
 export function useUpdatePaymentStatus() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({
       id,
       payment_status,
@@ -99,6 +122,13 @@ export function useUpdatePaymentStatus() {
       if (error) throw new Error(error.message);
       return data as Appointment;
     },
+    getQueueEntry: ({ id, payment_status }) => ({
+      method: "PATCH",
+      url: API_ROUTES.appointmentById(id),
+      payload: { payment_status },
+      label: "Payment Status",
+      invalidateKeys: [QK.appointments(), QK.appointment(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.appointments() });
       qc.invalidateQueries({ queryKey: QK.appointment(id) });

@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { productsService } from "@/services/products.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { Product, ProductCategory } from "@/types/database";
 
 export function useProducts(filters?: { categoryId?: string; search?: string }) {
@@ -41,7 +43,7 @@ export function useProductCategories() {
 
 export function useCreateProduct() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async (payload: Partial<Product>) => {
       const { data, error } = await productsService.create(
         payload as Parameters<typeof productsService.create>[0],
@@ -49,6 +51,13 @@ export function useCreateProduct() {
       if (error) throw new Error(error.message);
       return data as Product;
     },
+    getQueueEntry: (payload) => ({
+      method: "POST",
+      url: API_ROUTES.products,
+      payload,
+      label: "Product",
+      invalidateKeys: [QK.products()],
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.products() });
     },
@@ -57,7 +66,7 @@ export function useCreateProduct() {
 
 export function useUpdateProduct() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<Product>) => {
       const { data, error } = await productsService.update(
         id,
@@ -66,6 +75,13 @@ export function useUpdateProduct() {
       if (error) throw new Error(error.message);
       return data as Product;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.productById(id),
+      payload,
+      label: "Product",
+      invalidateKeys: [QK.products(), QK.product(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.products() });
       qc.invalidateQueries({ queryKey: QK.product(id) });
@@ -88,12 +104,19 @@ export function useDeleteProduct() {
 
 export function useUpdateProductStock() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
       const { data, error } = await productsService.updateStock(id, quantity);
       if (error) throw new Error(error.message);
       return data as Product;
     },
+    getQueueEntry: ({ id, quantity }) => ({
+      method: "PATCH",
+      url: API_ROUTES.productById(id),
+      payload: { stock_quantity: quantity },
+      label: "Product Stock",
+      invalidateKeys: [QK.products(), QK.product(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.products() });
       qc.invalidateQueries({ queryKey: QK.product(id) });

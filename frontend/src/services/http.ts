@@ -5,6 +5,7 @@ import { config } from "@/config/config";
 const http = axios.create({
   baseURL: config.app.backend_url,
   headers: { "Content-Type": "application/json" },
+  timeout: 4000, // fail fast when offline so offline-queue kicks in quickly
 });
 
 http.interceptors.request.use(async (config) => {

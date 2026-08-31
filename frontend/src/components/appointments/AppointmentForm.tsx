@@ -92,6 +92,7 @@ export function AppointmentForm({ userRole, clientId, appointment, onSuccess, on
       onSuccess();
     } catch (e) {
       setError((e as Error).message);
+    } finally {
       setSubmitting(false);
     }
   };

@@ -33,6 +33,7 @@ import {
 import { formatCurrency } from "@/utils/format";
 import { formatDate } from "@/utils/date";
 import { exportCsv } from "@/utils/csv";
+import { exportReportPdf } from "@/utils/pdf";
 import { DollarSign, Calendar, Users, TrendingUp, Download } from "lucide-react";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import type { ReportsViewProps, StaffPerf } from "@/types/props";
@@ -168,19 +169,15 @@ export function ReportsView({ role }: ReportsViewProps) {
           size="sm"
           variant="outline"
           onClick={() =>
-            exportCsv(
-              "revenue-report",
-              revenueData.map((r) => ({
-                Date: r.date,
-                "Appointment Revenue": r.appointments,
-                "Product Revenue": r.products,
-                "Total Revenue": r.appointments + r.products,
-              })),
+            exportReportPdf(
+              { revenueData, appointmentData, staffPerf, productSales, stats },
+              appliedFrom,
+              appliedTo,
             )
           }
         >
           <Download className="h-3.5 w-3.5 mr-1.5" />
-          Export CSV
+          Export Report
         </Button>
       </div>
 

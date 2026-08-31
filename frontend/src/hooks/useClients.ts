@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { clientsService } from "@/services/clients.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { Profile } from "@/types/database";
 
 export function useClients(search?: string) {
@@ -51,6 +53,7 @@ export function useClientAppointmentCounts() {
   });
 }
 
+// Client creation involves Supabase auth user creation — not safe to queue offline
 export function useCreateClient() {
   const qc = useQueryClient();
   return useMutation({
@@ -67,12 +70,19 @@ export function useCreateClient() {
 
 export function useUpdateClient() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<Profile>) => {
       const { data, error } = await clientsService.update(id, payload);
       if (error) throw new Error(error.message);
       return data as Profile;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.clientById(id),
+      payload,
+      label: "Client",
+      invalidateKeys: [QK.clients(), QK.client(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.clients() });
       qc.invalidateQueries({ queryKey: QK.client(id) });

@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { treatmentPlansService } from "@/services/treatment-plans.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { TreatmentPlanTemplate, ClientTreatmentPlan } from "@/types/database";
 
 export function useTreatmentPlanTemplates() {
@@ -67,7 +69,7 @@ export function useCreateTreatmentPlanTemplate() {
 
 export function useUpdateTreatmentPlanTemplate() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({
       id,
       ...payload
@@ -79,6 +81,13 @@ export function useUpdateTreatmentPlanTemplate() {
       if (error) throw new Error(error.message);
       return data as TreatmentPlanTemplate;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.treatmentPlanTemplateById(id),
+      payload,
+      label: "Treatment Plan Template",
+      invalidateKeys: [QK.treatmentPlans.templates(), QK.treatmentPlans.template(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.treatmentPlans.templates() });
       qc.invalidateQueries({ queryKey: QK.treatmentPlans.template(id) });
@@ -88,12 +97,19 @@ export function useUpdateTreatmentPlanTemplate() {
 
 export function useCreateClientTreatmentPlan() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async (payload: Parameters<typeof treatmentPlansService.createClientPlan>[0]) => {
       const { data, error } = await treatmentPlansService.createClientPlan(payload);
       if (error) throw new Error(error.message);
       return data as ClientTreatmentPlan;
     },
+    getQueueEntry: (payload) => ({
+      method: "POST",
+      url: API_ROUTES.treatmentPlans,
+      payload,
+      label: "Treatment Plan",
+      invalidateKeys: [QK.treatmentPlans.client()],
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.treatmentPlans.client() });
     },
@@ -102,7 +118,7 @@ export function useCreateClientTreatmentPlan() {
 
 export function useUpdateClientTreatmentPlan() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({
       id,
       ...payload
@@ -114,6 +130,13 @@ export function useUpdateClientTreatmentPlan() {
       if (error) throw new Error(error.message);
       return data as ClientTreatmentPlan;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.treatmentPlanById(id),
+      payload,
+      label: "Treatment Plan",
+      invalidateKeys: [QK.treatmentPlans.client(), QK.treatmentPlans.clientById(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.treatmentPlans.client() });
       qc.invalidateQueries({ queryKey: QK.treatmentPlans.clientById(id) });

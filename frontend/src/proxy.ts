@@ -30,15 +30,33 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getUser() contacts the Supabase server to verify the JWT.
+  // When offline it fails with status 0 (network error) — that is NOT the same
+  // as "user is unauthenticated". Only redirect to login on a definitive auth
+  // failure (non-zero HTTP status from the server).
+  let user = null;
+  let couldNotVerify = false;
+
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      // status 0 → fetch/network error (offline, DNS failure, etc.)
+      // non-zero → server said the token is invalid/expired
+      couldNotVerify = !error.status || error.status === 0;
+    } else {
+      user = data.user;
+    }
+  } catch {
+    couldNotVerify = true;
+  }
 
   const isPublicRoute = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
   const isDashboardRoute = DASHBOARD_ROUTES.some((r) => pathname.startsWith(r));
 
-  if (!user) {
-    // Unauthenticated: allow landing page + auth pages; block dashboard
+  // Only block unauthenticated access when we got a definitive "not logged in"
+  // answer from the server. If we couldn't reach the server, let the request
+  // through — the client-side offline screen will handle the UX.
+  if (!user && !couldNotVerify) {
     if (isDashboardRoute) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirectTo", pathname);
@@ -47,24 +65,33 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Logged-in: redirect away from auth pages to dashboard
-  if (isPublicRoute) {
+  // Logged-in user hitting a public (auth) page → send to dashboard
+  if (user && isPublicRoute) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  const role = profile?.role ?? "customer";
+  // Role-based route protection. The profiles query also requires network —
+  // skip the check when we couldn't reach Supabase (offline).
+  if (user) {
+    let role: string | null = null;
+    try {
+      const { data: profile, error } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      if (!error) role = profile?.role ?? "customer";
+    } catch {
+      // offline — leave role null so we skip restricted-route redirects
+    }
 
-  if (ADMIN_ONLY_ROUTES.some((r) => pathname.startsWith(r)) && role !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    if (role !== null) {
+      if (ADMIN_ONLY_ROUTES.some((r) => pathname.startsWith(r)) && role !== "admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (STAFF_RESTRICTED_ROUTES.some((r) => pathname.startsWith(r)) && role === "customer") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      response.headers.set("x-user-role", role);
+      response.headers.set("x-user-id", user.id);
+    }
   }
-
-  if (STAFF_RESTRICTED_ROUTES.some((r) => pathname.startsWith(r)) && role === "customer") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  response.headers.set("x-user-role", role);
-  response.headers.set("x-user-id", user.id);
 
   return response;
 }

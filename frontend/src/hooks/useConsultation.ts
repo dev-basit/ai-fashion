@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { consultationService } from "@/services/consultation.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { ConsultationFormTemplate, ConsultationRecord } from "@/types/database";
 
 export function useConsultationTemplates() {
@@ -67,7 +69,7 @@ export function useCreateConsultationTemplate() {
 
 export function useUpdateConsultationTemplate() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({
       id,
       ...payload
@@ -79,6 +81,13 @@ export function useUpdateConsultationTemplate() {
       if (error) throw new Error(error.message);
       return data as ConsultationFormTemplate;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.consultationTemplateById(id),
+      payload,
+      label: "Consultation Template",
+      invalidateKeys: [QK.consultation.templates(), QK.consultation.template(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.consultation.templates() });
       qc.invalidateQueries({ queryKey: QK.consultation.template(id) });
@@ -88,12 +97,19 @@ export function useUpdateConsultationTemplate() {
 
 export function useCreateConsultationRecord() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async (payload: Parameters<typeof consultationService.createRecord>[0]) => {
       const { data, error } = await consultationService.createRecord(payload);
       if (error) throw new Error(error.message);
       return data as ConsultationRecord;
     },
+    getQueueEntry: (payload) => ({
+      method: "POST",
+      url: API_ROUTES.consultationRecords,
+      payload,
+      label: "Consultation Record",
+      invalidateKeys: [QK.consultation.records()],
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.consultation.records() });
     },
@@ -102,7 +118,7 @@ export function useCreateConsultationRecord() {
 
 export function useUpdateConsultationRecord() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({
       id,
       ...payload
@@ -114,6 +130,13 @@ export function useUpdateConsultationRecord() {
       if (error) throw new Error(error.message);
       return data as ConsultationRecord;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.consultationRecordById(id),
+      payload,
+      label: "Consultation Record",
+      invalidateKeys: [QK.consultation.records(), QK.consultation.record(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.consultation.records() });
       qc.invalidateQueries({ queryKey: QK.consultation.record(id) });

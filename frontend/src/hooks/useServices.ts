@@ -2,7 +2,9 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/config/query";
+import { API_ROUTES } from "@/config/constants";
 import { servicesService } from "@/services/services.service";
+import { useOfflineMutation } from "@/hooks/useOfflineMutation";
 import type { Service, ServiceCategory, ServiceVariant } from "@/types/database";
 
 export function useServices(categoryId?: string) {
@@ -41,7 +43,7 @@ export function useServiceCategories() {
 
 export function useCreateService() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async (payload: Partial<Service>) => {
       const { data, error } = await servicesService.createService(
         payload as Parameters<typeof servicesService.createService>[0],
@@ -49,6 +51,13 @@ export function useCreateService() {
       if (error) throw new Error(error.message);
       return data as Service;
     },
+    getQueueEntry: (payload) => ({
+      method: "POST",
+      url: API_ROUTES.services,
+      payload,
+      label: "Service",
+      invalidateKeys: [QK.services()],
+    }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.services() });
     },
@@ -57,7 +66,7 @@ export function useCreateService() {
 
 export function useUpdateService() {
   const qc = useQueryClient();
-  return useMutation({
+  return useOfflineMutation({
     mutationFn: async ({ id, ...payload }: { id: string } & Partial<Service>) => {
       const { data, error } = await servicesService.updateService(
         id,
@@ -66,6 +75,13 @@ export function useUpdateService() {
       if (error) throw new Error(error.message);
       return data as Service;
     },
+    getQueueEntry: ({ id, ...payload }) => ({
+      method: "PATCH",
+      url: API_ROUTES.serviceById(id),
+      payload,
+      label: "Service",
+      invalidateKeys: [QK.services(), QK.service(id)],
+    }),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QK.services() });
       qc.invalidateQueries({ queryKey: QK.service(id) });
