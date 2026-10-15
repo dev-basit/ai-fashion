@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ROUTES } from "@/config/constants";
@@ -8,47 +9,44 @@ import {
   LANDING_STATS,
   LANDING_GALLERY_PHOTOS,
   LANDING_HERO_PHOTOS,
-  LANDING_CLIENT_AVATARS,
   LANDING_FEATURES,
   LANDING_ROLES,
 } from "@/config/website";
 import { useInView } from "./useInView";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
-import { LogoSidebar, LogoIcon } from "@/components/common/Logo";
-import {
-  Calendar,
-  Users,
-  Scissors,
-  ShoppingBag,
-  MessageSquare,
-  BarChart2,
-  ClipboardList,
-  FileText,
-  Shield,
-  Star,
-  ArrowRight,
-  Check,
-  Sparkles,
-  Zap,
-  TrendingUp,
-  Lock,
-  Layers,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, Star } from "lucide-react";
 
-function FadeIn({
+// ── Hero "how it works" trio ────────────────────────────────────────────────
+const HERO_STEPS = [
+  { k: "Book", d: "Appointments, consultations, and reminders in one shared calendar." },
+  { k: "Care", d: "Client histories, treatment plans, and chat that never drops a note." },
+  { k: "Grow", d: "Revenue, staff, and product insight — exported in a single click." },
+];
+
+const EDGE = "mx-auto max-w-[1400px] px-6 sm:px-10 lg:px-14";
+const BTN_PRIMARY =
+  "group inline-flex items-center justify-center gap-2.5 bg-foreground text-background px-7 py-4 font-mono text-[12px] uppercase tracking-[0.2em] hover:opacity-90 transition-opacity";
+const BTN_GHOST =
+  "group inline-flex items-center justify-center gap-2.5 border border-border text-foreground px-7 py-4 font-mono text-[12px] uppercase tracking-[0.2em] hover:bg-foreground hover:text-background transition-colors";
+
+// ── Scroll-reveal wrapper ─────────────────────────────────────────────────────
+function Reveal({
   children,
   className = "",
   delay = 0,
+  variant = "up",
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
+  variant?: "up" | "scale";
 }) {
-  const { ref, inView } = useInView();
+  const { ref, inView } = useInView(0.15);
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"} ${className}`}
+      data-v={variant}
+      className={`reveal ${inView ? "is-in" : ""} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
     >
       {children}
@@ -56,234 +54,156 @@ function FadeIn({
   );
 }
 
-function DashboardMockup() {
+// ── Editorial photo with figure caption ──────────────────────────────────────
+function EdFigure({
+  src,
+  alt,
+  label,
+  fig,
+  aspect,
+  sizes,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+  fig: string;
+  aspect: string;
+  sizes: string;
+  priority?: boolean;
+}) {
   return (
-    <svg
-      viewBox="0 0 580 380"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-full h-auto drop-shadow-2xl"
-    >
-      <rect width="580" height="380" rx="14" fill="#0d0d0d" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-      <rect width="580" height="42" rx="14" fill="#141414" />
-      <rect y="28" width="580" height="14" fill="#141414" />
-      <circle cx="22" cy="21" r="5" fill="#3a3a3a" />
-      <circle cx="38" cy="21" r="5" fill="#3a3a3a" />
-      <circle cx="54" cy="21" r="5" fill="#3a3a3a" />
-      <rect x="250" y="15" width="80" height="10" rx="3" fill="rgba(255,255,255,0.08)" />
-      <rect x="0" y="42" width="158" height="338" fill="#111111" />
-      <rect x="158" y="42" width="1" height="338" fill="rgba(255,255,255,0.06)" />
-      <rect x="16" y="58" width="88" height="10" rx="3" fill="rgba(255,255,255,0.18)" />
-      <rect x="10" y="86" width="138" height="28" rx="6" fill="rgba(255,255,255,0.08)" />
-      <rect x="22" y="95" width="8" height="8" rx="2" fill="rgba(255,255,255,0.55)" />
-      <rect x="36" y="97" width="52" height="6" rx="2" fill="rgba(255,255,255,0.45)" />
-      <rect x="22" y="128" width="8" height="8" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="36" y="130" width="64" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="22" y="158" width="8" height="8" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="36" y="160" width="48" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="22" y="188" width="8" height="8" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="36" y="190" width="56" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="22" y="218" width="8" height="8" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="36" y="220" width="44" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="22" y="248" width="8" height="8" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="36" y="250" width="60" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="178" y="58" width="88" height="12" rx="3" fill="rgba(255,255,255,0.2)" />
-      <rect
-        x="178"
-        y="86"
-        width="90"
-        height="52"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <rect x="190" y="98" width="38" height="7" rx="2" fill="rgba(255,255,255,0.1)" />
-      <rect x="190" y="113" width="58" height="9" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect
-        x="278"
-        y="86"
-        width="90"
-        height="52"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <rect x="290" y="98" width="42" height="7" rx="2" fill="rgba(255,255,255,0.1)" />
-      <rect x="290" y="113" width="52" height="9" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect
-        x="378"
-        y="86"
-        width="90"
-        height="52"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <rect x="390" y="98" width="36" height="7" rx="2" fill="rgba(255,255,255,0.1)" />
-      <rect x="390" y="113" width="60" height="9" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect
-        x="478"
-        y="86"
-        width="88"
-        height="52"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <rect x="490" y="98" width="32" height="7" rx="2" fill="rgba(255,255,255,0.1)" />
-      <rect x="490" y="113" width="56" height="9" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect x="178" y="154" width="110" height="8" rx="3" fill="rgba(255,255,255,0.16)" />
-      <rect
-        x="178"
-        y="174"
-        width="196"
-        height="64"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <circle cx="200" cy="200" r="13" fill="rgba(255,255,255,0.06)" />
-      <rect x="222" y="191" width="70" height="7" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect x="222" y="205" width="52" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="222" y="220" width="38" height="5" rx="2" fill="rgba(255,255,255,0.08)" />
-      <circle cx="358" cy="200" r="5" fill="#4ade80" fillOpacity="0.8" />
-      <rect
-        x="178"
-        y="248"
-        width="196"
-        height="64"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <circle cx="200" cy="274" r="13" fill="rgba(255,255,255,0.06)" />
-      <rect x="222" y="265" width="62" height="7" rx="2" fill="rgba(255,255,255,0.3)" />
-      <rect x="222" y="279" width="58" height="6" rx="2" fill="rgba(255,255,255,0.12)" />
-      <rect x="222" y="294" width="38" height="5" rx="2" fill="rgba(255,255,255,0.08)" />
-      <circle cx="358" cy="274" r="5" fill="#f59e0b" fillOpacity="0.8" />
-      <rect
-        x="384"
-        y="154"
-        width="182"
-        height="160"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth="1"
-      />
-      <rect x="398" y="168" width="66" height="7" rx="2" fill="rgba(255,255,255,0.16)" />
-      <rect x="398" y="202" width="14" height="70" rx="3" fill="rgba(255,255,255,0.1)" />
-      <rect x="418" y="218" width="14" height="54" rx="3" fill="rgba(255,255,255,0.1)" />
-      <rect x="438" y="194" width="14" height="78" rx="3" fill="rgba(255,255,255,0.2)" />
-      <rect x="458" y="210" width="14" height="62" rx="3" fill="rgba(255,255,255,0.1)" />
-      <rect x="478" y="188" width="14" height="84" rx="3" fill="rgba(255,255,255,0.32)" />
-      <rect x="498" y="206" width="14" height="66" rx="3" fill="rgba(255,255,255,0.1)" />
-      <rect x="518" y="196" width="14" height="76" rx="3" fill="rgba(255,255,255,0.14)" />
-      <rect x="396" y="302" width="162" height="1" fill="rgba(255,255,255,0.06)" />
-      <rect
-        x="178"
-        y="324"
-        width="388"
-        height="40"
-        rx="8"
-        fill="#191919"
-        stroke="rgba(255,255,255,0.04)"
-        strokeWidth="1"
-      />
-      <circle cx="198" cy="344" r="10" fill="rgba(255,255,255,0.05)" />
-      <rect x="216" y="339" width="60" height="6" rx="2" fill="rgba(255,255,255,0.2)" />
-      <rect x="216" y="352" width="44" height="5" rx="2" fill="rgba(255,255,255,0.08)" />
-      <circle cx="548" cy="344" r="4" fill="#818cf8" fillOpacity="0.7" />
-    </svg>
+    <figure className={`ed-media group relative overflow-hidden ${aspect}`}>
+      <Image src={src} alt={alt} fill sizes={sizes} priority={priority} className="ed-img object-cover" />
+      <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-foreground/10" />
+      <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between p-4 text-white mix-blend-difference">
+        <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{label}</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.2em]">{fig}</span>
+      </figcaption>
+    </figure>
   );
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+// ── Thin reading-progress line ────────────────────────────────────────────────
+function ScrollProgress() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const max = el.scrollHeight - el.clientHeight;
+      setProgress(max > 0 ? Math.min(el.scrollTop / max, 1) : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="fixed top-0 inset-x-0 z-[60] h-px pointer-events-none">
+      <div className="h-full origin-left bg-foreground" style={{ transform: `scaleX(${progress})` }} />
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(document.documentElement.scrollTop > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const marquee = [...LANDING_MARQUEE, ...LANDING_MARQUEE];
+
+  return (
+    <div className="min-h-screen bg-background text-foreground font-sans antialiased selection:bg-foreground selection:text-background">
       <style>{`
-        @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-        .marquee-inner { animation: marquee 38s linear infinite; }
-        .marquee-inner:hover { animation-play-state: paused; }
+        @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        .marquee-track { animation: marquee 42s linear infinite; }
+        .marquee-wrap:hover .marquee-track { animation-play-state: paused; }
 
-        @keyframes float    { 0%,100% { transform: translateY(0px);   } 50% { transform: translateY(-10px); } }
-        @keyframes float-b  { 0%,100% { transform: translateY(-4px);  } 50% { transform: translateY(6px);  } }
-        .float-a { animation: float   6s ease-in-out infinite; }
-        .float-b { animation: float-b 7s ease-in-out infinite; }
+        @keyframes enter { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+        .enter { opacity: 0; animation: enter 1s cubic-bezier(0.22,1,0.36,1) forwards; }
 
-        @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:.35; } }
-        .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+        .reveal {
+          opacity: 0; transform: translateY(32px);
+          transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1), transform 0.9s cubic-bezier(0.22,1,0.36,1);
+          will-change: opacity, transform;
+        }
+        .reveal[data-v="scale"] { transform: scale(0.955); }
+        .reveal.is-in { opacity: 1; transform: none; }
 
-        .nav-link { position: relative; }
         .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: -2px; left: 0;
-          width: 100%; height: 1px;
-          background: currentColor;
-          transform: scaleX(0);
-          transform-origin: left;
-          transition: transform 0.2s ease;
+          content: ''; position: absolute; left: 0; bottom: -5px;
+          height: 1px; width: 100%; background: currentColor;
+          transform: scaleX(0); transform-origin: left;
+          transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
         }
         .nav-link:hover::after { transform: scaleX(1); }
 
-        .feature-card { transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease; }
-        .feature-card:hover {
-          border-color: hsl(var(--foreground) / 0.2);
-          box-shadow: 0 4px 24px rgba(0,0,0,0.07);
-          transform: translateY(-2px);
+        .ed-img { filter: grayscale(100%) contrast(1.03); transition: transform 0.9s cubic-bezier(0.22,1,0.36,1), filter 0.6s ease; }
+        .ed-media:hover .ed-img { transform: scale(1.05); filter: grayscale(35%); }
+
+        .idx-row { transition: background-color 0.4s ease; }
+        .idx-title { transition: transform 0.5s cubic-bezier(0.22,1,0.36,1); }
+        .idx-row:hover .idx-title { transform: translateX(14px); }
+        .idx-arrow { transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.4s ease; }
+        .idx-row:hover .idx-arrow { transform: translate(6px,-6px); opacity: 1; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .marquee-track, .enter { animation: none !important; }
+          .enter { opacity: 1 !important; transform: none !important; }
+          .reveal { transition: none !important; opacity: 1 !important; transform: none !important; }
+          .ed-img { transition: none !important; }
         }
-        .dark .feature-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
-        .feature-icon-wrap { transition: background 0.2s ease, transform 0.2s ease; }
-        .feature-card:hover .feature-icon-wrap {
-          background: var(--foreground);
-          transform: scale(1.08);
-        }
-        .feature-card:hover .feature-icon-wrap svg { color: var(--background) !important; }
-
-        .role-card { transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease; }
-        .role-card:hover { transform: translateY(-5px); }
-
-        .stat-item { transition: opacity 0.2s ease; }
-        .stat-item:hover { opacity: 0.8; }
-
-        .gallery-img { transition: transform 0.5s ease, filter 0.3s ease; filter: grayscale(100%); }
-        .gallery-card:hover .gallery-img { transform: scale(1.04); filter: grayscale(60%); }
       `}</style>
 
-      {/* ── Navbar ───────────────────────────────────────────────────────── */}
-      <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-xl border-b border-border bg-background/80">
-        <div className="max-w-7xl mx-auto px-5 sm:px-10 h-16 flex items-center justify-between">
-          <LogoSidebar />
-          <div className="flex items-center gap-2">
+      <ScrollProgress />
+
+      {/* ── Nav ──────────────────────────────────────────────────────────── */}
+      <header
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
+          scrolled
+            ? "bg-background/85 backdrop-blur-xl border-b border-border"
+            : "bg-transparent border-b border-transparent"
+        }`}
+      >
+        <div className={`${EDGE} h-20 flex items-center justify-between`}>
+          <Link href="/" className="flex items-baseline gap-2">
+            <span className="font-serif text-2xl sm:text-[26px] leading-none tracking-tight">Glow</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">By Miral</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            <Link href="#index" className="nav-link relative hover:text-foreground transition-colors">
+              Index
+            </Link>
+            <Link href="#atelier" className="nav-link relative hover:text-foreground transition-colors">
+              Atelier
+            </Link>
+            <Link href="#roles" className="nav-link relative hover:text-foreground transition-colors">
+              Roles
+            </Link>
+          </nav>
+
+          <div className="flex items-center gap-3 sm:gap-5">
             <ThemeToggle />
             {isLoggedIn ? (
-              <Link
-                href={ROUTES.dashboard}
-                className="group inline-flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-              >
-                Dashboard <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              <Link href={ROUTES.dashboard} className={BTN_PRIMARY + " !px-4 sm:!px-5 !py-2.5 !text-[11px]"}>
+                Dashboard
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             ) : (
               <>
                 <Link
                   href={ROUTES.login}
-                  className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5"
+                  className="hidden sm:block font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Sign in
                 </Link>
-                <Link
-                  href={ROUTES.login}
-                  className="group inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-                >
-                  Get started{" "}
+                <Link href={ROUTES.login} className={BTN_PRIMARY + " !px-4 sm:!px-5 !py-2.5 !text-[11px]"}>
+                  Get started
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </>
@@ -293,632 +213,422 @@ export function LandingPage({ isLoggedIn = false }: { isLoggedIn?: boolean }) {
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-28 pb-20 sm:pt-30 sm:pb-28">
-        {/* Dot grid */}
+      <section className="relative overflow-hidden">
         <div
-          className="pointer-events-none absolute inset-0 block dark:hidden"
-          style={{
-            backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.09) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0 hidden dark:block"
-          style={{
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        {/* Bottom fade */}
-        <div className="pointer-events-none absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-background to-transparent" />
+          aria-hidden
+          className="pointer-events-none select-none absolute -bottom-[0.18em] left-1 font-serif italic text-foreground/[0.045] text-[34vw] leading-none"
+        >
+          Glow
+        </div>
 
-        <div className="relative max-w-7xl mx-auto px-5 sm:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
-            {/* Copy */}
-            <div>
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3.5 py-1.5 text-xs text-muted-foreground mb-8">
-                <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-foreground/60 flex-shrink-0" />
-                <Sparkles className="h-3 w-3" />
-                Salon management, reimagined
-              </div>
-
-              <h1 className="text-5xl sm:text-6xl lg:text-[64px] font-bold tracking-tight leading-[1.04] mb-7">
-                The complete
-                <br />
-                platform for
-                <br />
-                <span className="relative">
-                  modern salons
-                  <span className="pointer-events-none absolute -bottom-1 left-0 right-0 h-px bg-foreground/20 hidden sm:block" />
-                </span>
-              </h1>
-
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-lg">
-                Glow By Miral unifies appointments, client records, staff management, products, and analytics into
-                one elegant workspace.
+        <div className={`relative ${EDGE} pt-32 sm:pt-40 pb-16 sm:pb-20`}>
+          {/* Headline row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-end">
+            <div className="lg:col-span-8">
+              <p className="enter font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-7">
+                <span className="text-foreground">(01)</span>&nbsp;&nbsp;—&nbsp;&nbsp;Premium salon management
               </p>
+              <h1 className="enter font-serif font-medium tracking-[-0.02em] leading-[0.9] text-[clamp(3.25rem,12vw,9.5rem)]" style={{ animationDelay: "0.08s" }}>
+                Beauty,
+                <br />
+                <span className="italic font-normal">reimagined.</span>
+              </h1>
+            </div>
+            <div className="lg:col-span-4 lg:pb-3">
+              <div className="enter h-px w-full bg-border mb-6" style={{ animationDelay: "0.16s" }} />
+              <p className="enter text-[15px] sm:text-base text-muted-foreground leading-relaxed max-w-sm" style={{ animationDelay: "0.2s" }}>
+                Glow By Miral unifies appointments, client records, staff, products, and analytics into one elegant,
+                editorial workspace.
+              </p>
+            </div>
+          </div>
 
-              {/* Mini stats pills */}
-              <div className="flex flex-wrap gap-2 mb-9">
-                {["Appointments", "Client records", "Staff scheduling", "Live analytics"].map((pill) => (
-                  <span
-                    key={pill}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-full px-3 py-1 bg-muted/30"
-                  >
-                    <Check className="h-3 w-3 flex-shrink-0" strokeWidth={2.5} />
-                    {pill}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 mb-10">
-                {isLoggedIn ? (
-                  <Link
-                    href={ROUTES.dashboard}
-                    className="group inline-flex items-center justify-center gap-2 text-[15px] font-semibold px-7 py-3.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-                  >
-                    Go to Dashboard{" "}
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                ) : (
-                  <>
-                    <Link
-                      href={ROUTES.login}
-                      className="group inline-flex items-center justify-center gap-2 text-[15px] font-semibold px-7 py-3.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-                    >
-                      Get started free{" "}
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                    <Link
-                      href={ROUTES.login}
-                      className="group inline-flex items-center justify-center gap-2 text-[15px] font-medium px-7 py-3.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-                    >
-                      Sign in
-                      <ArrowRight className="h-4 w-4 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Photo proof strip */}
-              <div className="flex items-center gap-4">
-                <div className="flex -space-x-2">
-                  {LANDING_HERO_PHOTOS.map((p, i) => (
-                    <div
-                      key={i}
-                      className="relative w-10 h-10 rounded-full border-2 border-background overflow-hidden flex-shrink-0"
-                      style={{ zIndex: LANDING_HERO_PHOTOS.length - i }}
-                    >
-                      <Image src={p.src} alt={p.alt} fill className="object-cover grayscale" sizes="40px" />
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-3 w-3 fill-foreground text-foreground" />
-                    ))}
-                  </div>
-                  <p className="text-[12px] text-muted-foreground">Loved by salon teams</p>
-                </div>
-              </div>
+          {/* Media + actions row */}
+          <div className="mt-12 sm:mt-16 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+            <div className="enter lg:col-span-7" style={{ animationDelay: "0.24s" }}>
+              <EdFigure
+                src="https://images.unsplash.com/photo-1562322140-8baeececf3df?w=1400&q=80&auto=format&fit=crop"
+                alt="Stylist attending to a client"
+                label="The Glow atelier"
+                fig="Fig. 01"
+                aspect="aspect-[16/10] sm:aspect-[16/9]"
+                sizes="(max-width: 1024px) 100vw, 58vw"
+                priority
+              />
             </div>
 
-            {/* Mockup */}
-            <div className="relative hidden lg:block">
-              <div
-                className="pointer-events-none absolute inset-0 blur-3xl opacity-0 dark:opacity-100"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255,255,255,0.06), transparent 70%)",
-                }}
-              />
-              <div className="relative rounded-2xl overflow-hidden border border-border/60 shadow-2xl dark:shadow-black/60 transition-transform duration-500 hover:scale-[1.015]">
-                <DashboardMockup />
-              </div>
+            <div className="enter lg:col-span-5 flex flex-col justify-between gap-10" style={{ animationDelay: "0.3s" }}>
+              <ol className="border-t border-border">
+                {HERO_STEPS.map((s, i) => (
+                  <li key={s.k} className="flex gap-5 border-b border-border py-5">
+                    <span className="font-mono text-xs text-muted-foreground pt-1.5 tabular-nums">0{i + 1}</span>
+                    <div>
+                      <h3 className="font-serif text-2xl leading-none">{s.k}</h3>
+                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.d}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
 
-              {/* Floating notification */}
-              <div className="float-a absolute -left-10 bottom-20 rounded-2xl p-3.5 flex items-center gap-3 bg-card border border-border shadow-xl min-w-[210px]">
-                <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 border border-border relative">
-                  <Image
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&q=75&auto=format&fit=crop&crop=face"
-                    alt="Client"
-                    fill
-                    className="object-cover grayscale"
-                    sizes="36px"
-                  />
+              <div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {isLoggedIn ? (
+                    <Link href={ROUTES.dashboard} className={BTN_PRIMARY}>
+                      Go to Dashboard
+                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
+                  ) : (
+                    <>
+                      <Link href={ROUTES.login} className={BTN_PRIMARY}>
+                        Get started
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </Link>
+                      <Link href={ROUTES.login} className={BTN_GHOST}>
+                        Sign in
+                      </Link>
+                    </>
+                  )}
                 </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">Appointment confirmed</p>
-                  <p className="text-[12px] text-muted-foreground">Hair treatment · 2:30 PM</p>
+
+                <div className="mt-7 flex items-center gap-4">
+                  <div className="flex -space-x-2">
+                    {LANDING_HERO_PHOTOS.map((p, i) => (
+                      <div
+                        key={i}
+                        className="relative w-9 h-9 rounded-full border-2 border-background overflow-hidden"
+                        style={{ zIndex: LANDING_HERO_PHOTOS.length - i }}
+                      >
+                        <Image src={p.src} alt={p.alt} fill sizes="36px" className="object-cover grayscale" />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-0.5 mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-3 w-3 fill-foreground text-foreground" />
+                      ))}
+                    </div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Loved by salon teams
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Floating stat */}
-              <div className="float-b absolute -right-6 top-16 rounded-2xl p-4 bg-card border border-border shadow-xl">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                  This month
-                </p>
-                <p className="text-3xl font-bold text-foreground leading-none">24</p>
-                <p className="text-[12px] text-muted-foreground mt-1.5 flex items-center gap-1">
-                  <TrendingUp className="h-3 w-3" /> appointments
-                </p>
-              </div>
-
-              {/* Floating badge */}
-              <div className="float-a absolute -right-4 bottom-10 rounded-xl px-3 py-2 bg-foreground text-background shadow-xl flex items-center gap-2">
-                <Zap className="h-3.5 w-3.5" />
-                <span className="text-[12px] font-semibold">Real-time sync</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Marquee ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden py-4 border-t border-b border-border bg-muted/20">
-        <div className="pointer-events-none absolute left-0 inset-y-0 w-24 z-10 bg-gradient-to-r from-background to-transparent" />
-        <div className="pointer-events-none absolute right-0 inset-y-0 w-24 z-10 bg-gradient-to-l from-background to-transparent" />
-        <div className="marquee-inner flex gap-10 w-max">
-          {[...LANDING_MARQUEE, ...LANDING_MARQUEE].map((item, i) => (
-            <div key={i} className="flex items-center gap-2.5 flex-shrink-0">
-              <item.icon className="h-4 w-4 text-muted-foreground/50" strokeWidth={1.6} />
-              <span className="text-sm text-muted-foreground/60 whitespace-nowrap">{item.label}</span>
-              <span className="ml-3 text-border">·</span>
-            </div>
+      {/* ── Kinetic marquee ──────────────────────────────────────────────── */}
+      <section className="marquee-wrap relative overflow-hidden border-y border-border py-6 sm:py-9">
+        <div className="marquee-track flex w-max items-center">
+          {marquee.map((item, i) => (
+            <span key={i} className="flex items-center">
+              <span className="font-serif italic text-3xl sm:text-5xl text-foreground/80 whitespace-nowrap px-8 sm:px-12">
+                {item.label}
+              </span>
+              <span className="font-serif text-2xl sm:text-3xl text-muted-foreground/40">✳</span>
+            </span>
           ))}
         </div>
-      </div>
-
-      {/* ── Gallery strip ────────────────────────────────────────────────── */}
-      <section className="py-14 px-5 sm:px-10 border-b border-border overflow-hidden">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
-            {LANDING_GALLERY_PHOTOS.map((photo, i) => (
-              <div
-                key={i}
-                className="gallery-card group relative overflow-hidden rounded-2xl aspect-[4/3] border border-border"
-              >
-                <Image
-                  src={photo.src}
-                  alt={photo.alt}
-                  fill
-                  className="gallery-img object-cover"
-                  sizes="(max-width: 768px) 33vw, 400px"
-                />
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors duration-300" />
-                {/* Label */}
-                <div className="absolute bottom-0 inset-x-0 p-4 translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
-                  <span className="text-xs font-semibold text-background bg-foreground/80 backdrop-blur-sm rounded-full px-3 py-1">
-                    {photo.label}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-20 sm:w-32 bg-gradient-to-r from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-20 sm:w-32 bg-gradient-to-l from-background to-transparent" />
       </section>
 
       {/* ── Stats ────────────────────────────────────────────────────────── */}
-      <section className="py-16 px-5 sm:px-10 border-b border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-border rounded-2xl overflow-hidden">
-            {LANDING_STATS.map((s, i) => (
-              <div key={i} className="stat-item bg-background px-8 py-8 text-center">
-                <p className="text-4xl sm:text-5xl font-bold tracking-tight text-foreground mb-2">{s.value}</p>
-                <p className="text-sm text-muted-foreground">{s.label}</p>
+      <section className={`${EDGE} py-20 sm:py-28`}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border">
+          {LANDING_STATS.map((s, i) => (
+            <Reveal key={i} delay={i * 80} className="bg-background">
+              <div className="px-6 sm:px-8 py-10 sm:py-14">
+                <div className="font-serif text-5xl sm:text-6xl lg:text-7xl leading-none tracking-[-0.02em]">
+                  {s.value}
+                </div>
+                <div className="mt-5 font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+                  {s.label}
+                </div>
               </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Index (features) ─────────────────────────────────────────────── */}
+      <section id="index" className={`${EDGE} pb-20 sm:pb-28`}>
+        <Reveal className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-end mb-12 sm:mb-16">
+          <div className="lg:col-span-8">
+            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-6">
+              <span className="text-foreground">(02)</span>&nbsp;&nbsp;—&nbsp;&nbsp;The index
+            </p>
+            <h2 className="font-serif tracking-[-0.02em] leading-[0.95] text-[clamp(2.25rem,6.5vw,4.75rem)]">
+              Everything the modern
+              <br />
+              salon needs, <span className="italic">built in.</span>
+            </h2>
+          </div>
+          <p className="lg:col-span-4 text-sm text-muted-foreground leading-relaxed lg:pb-3">
+            Eight core modules. Three roles. One unified workspace designed for the way salons actually run.
+          </p>
+        </Reveal>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+          {/* Sticky image */}
+          <div className="hidden lg:block lg:col-span-5">
+            <div className="sticky top-28">
+              <EdFigure
+                src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=900&q=80&auto=format&fit=crop"
+                alt="Hair care treatment in progress"
+                label="Designed for busy days"
+                fig="Fig. 02"
+                aspect="aspect-[4/5]"
+                sizes="40vw"
+              />
+            </div>
+          </div>
+
+          {/* Numbered list */}
+          <div className="lg:col-span-7 border-t border-border">
+            {LANDING_FEATURES.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 4) * 60}>
+                <div className="idx-row group grid grid-cols-[auto_1fr_auto] items-start gap-4 sm:gap-6 border-b border-border py-6 sm:py-7 px-2 sm:px-4 -mx-2 sm:-mx-4 hover:bg-muted/40">
+                  <span className="font-mono text-xs text-muted-foreground pt-2 tabular-nums">0{i + 1}</span>
+                  <div className="idx-title">
+                    <div className="flex items-center gap-3">
+                      <f.icon className="h-4 w-4 text-foreground" strokeWidth={1.6} />
+                      <h3 className="font-serif text-2xl sm:text-3xl leading-tight">{f.title}</h3>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-md">{f.desc}</p>
+                  </div>
+                  <ArrowUpRight className="idx-arrow h-5 w-5 text-muted-foreground opacity-40 mt-1.5" />
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Features (Bento) ─────────────────────────────────────────────── */}
-      <section id="features" className="py-28 px-5 sm:px-10">
-        <div className="max-w-7xl mx-auto">
-          <FadeIn className="mb-16">
-            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Features</p>
-                <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
-                  Everything you need
-                  <br />
-                  to run a modern salon
-                </h2>
-              </div>
-              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-                From booking to billing, every tool your team needs is built in from day one.
-              </p>
-            </div>
-          </FadeIn>
-
-          {/* Bento grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Wide card — Scheduling */}
-            <FadeIn delay={0} className="lg:col-span-2">
-              <div className="feature-card h-full rounded-2xl border border-border bg-card overflow-hidden flex flex-col sm:flex-row">
-                <div className="flex-shrink-0 p-8">
-                  <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center mb-5">
-                    <Calendar className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                  </div>
-                  <h3 className="font-semibold text-[17px] text-foreground mb-2">{LANDING_FEATURES[0].title}</h3>
-                  <p className="text-[14px] text-muted-foreground leading-relaxed max-w-xs">
-                    {LANDING_FEATURES[0].desc}
-                  </p>
-                </div>
-                {/* Photo */}
-                <div className="flex-1 relative min-h-[180px] sm:min-h-0">
-                  <Image
-                    src="https://images.unsplash.com/photo-1506784983877-45594efa4cbe?w=600&q=80&auto=format&fit=crop"
-                    alt="Appointment scheduling"
-                    fill
-                    className="object-cover grayscale"
-                    sizes="(max-width: 1024px) 100vw, 400px"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-card via-card/30 to-transparent pointer-events-none" />
-                </div>
-              </div>
-            </FadeIn>
-
-            {/* Client Profiles — with real avatars */}
-            <FadeIn delay={60}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <Users className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[1].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[1].desc}</p>
-                <div className="mt-auto pt-4 space-y-2">
-                  {LANDING_CLIENT_AVATARS.map(({ name, tag, src }) => (
-                    <div
-                      key={name}
-                      className="flex items-center gap-2.5 p-2 rounded-lg bg-muted/40 border border-border/50"
-                    >
-                      <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0 border border-border relative">
-                        <Image src={src} alt={name} fill className="object-cover grayscale" sizes="28px" />
-                      </div>
-                      <span className="text-[12px] text-muted-foreground">{name}</span>
-                      <span className="ml-auto text-[10px] text-muted-foreground/60">{tag}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </FadeIn>
-
-            {/* Consultation Forms */}
-            <FadeIn delay={90}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <ClipboardList className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[2].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[2].desc}</p>
-              </div>
-            </FadeIn>
-
-            {/* Treatment Plans */}
-            <FadeIn delay={110}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <FileText className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[3].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[3].desc}</p>
-              </div>
-            </FadeIn>
-
-            {/* Products & Orders */}
-            <FadeIn delay={130}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <ShoppingBag className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[4].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[4].desc}</p>
-              </div>
-            </FadeIn>
-
-            {/* Wide card — Chat with photo background */}
-            <FadeIn delay={60} className="lg:col-span-2">
-              <div className="feature-card h-full rounded-2xl border border-border bg-card overflow-hidden flex flex-col sm:flex-row-reverse">
-                <div className="flex-shrink-0 p-8">
-                  <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center mb-5">
-                    <MessageSquare className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                  </div>
-                  <h3 className="font-semibold text-[17px] text-foreground mb-2">{LANDING_FEATURES[5].title}</h3>
-                  <p className="text-[14px] text-muted-foreground leading-relaxed max-w-xs">
-                    {LANDING_FEATURES[5].desc}
-                  </p>
-                  {/* Chat bubbles */}
-                  <div className="mt-5 space-y-2">
-                    {[
-                      { from: "staff", text: "Your 3 PM slot is confirmed!" },
-                      { from: "client", text: "Perfect, thank you 😊" },
-                      { from: "staff", text: "See you soon!" },
-                    ].map((msg, j) => (
-                      <div key={j} className={`flex ${msg.from === "client" ? "justify-end" : "justify-start"}`}>
-                        <div
-                          className={`rounded-2xl px-3 py-1.5 text-[12px] max-w-[85%] ${
-                            msg.from === "client"
-                              ? "bg-foreground text-background"
-                              : "bg-muted border border-border text-foreground"
-                          }`}
-                        >
-                          {msg.text}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {/* Photo */}
-                <div className="flex-1 relative min-h-[180px] sm:min-h-0">
-                  <Image
-                    src="https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600&q=80&auto=format&fit=crop"
-                    alt="Stylist providing service to client"
-                    fill
-                    className="object-cover grayscale"
-                    sizes="(max-width: 1024px) 100vw, 400px"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-l from-card via-card/30 to-transparent pointer-events-none sm:bg-gradient-to-r" />
-                </div>
-              </div>
-            </FadeIn>
-
-            {/* Reports */}
-            <FadeIn delay={90}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <BarChart2 className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[6].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[6].desc}</p>
-              </div>
-            </FadeIn>
-
-            {/* Services */}
-            <FadeIn delay={110}>
-              <div className="feature-card h-full rounded-2xl border border-border bg-card p-8 flex flex-col gap-4">
-                <div className="feature-icon-wrap w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                  <Scissors className="h-5 w-5 text-foreground" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px] text-foreground">{LANDING_FEATURES[7].title}</h3>
-                <p className="text-[14px] text-muted-foreground leading-relaxed">{LANDING_FEATURES[7].desc}</p>
-              </div>
-            </FadeIn>
-
-            {/* Security — inverted accent card */}
-            <FadeIn delay={130}>
-              <div className="feature-card h-full rounded-2xl border border-foreground/10 bg-foreground text-background p-8 flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-background/10 border border-background/10 flex items-center justify-center">
-                  <Lock className="h-5 w-5 text-background" strokeWidth={1.7} />
-                </div>
-                <h3 className="font-semibold text-[16px]">Role-based access</h3>
-                <p className="text-[14px] text-background/70 leading-relaxed">
-                  Fine-grained permissions ensure every user sees exactly what they should — nothing more.
-                </p>
-              </div>
-            </FadeIn>
+      {/* ── Atelier (gallery) ────────────────────────────────────────────── */}
+      <section id="atelier" className={`${EDGE} pb-20 sm:pb-28`}>
+        <Reveal className="flex items-end justify-between gap-6 mb-8 sm:mb-10">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-5">
+              <span className="text-foreground">(03)</span>&nbsp;&nbsp;—&nbsp;&nbsp;The atelier
+            </p>
+            <h2 className="font-serif tracking-[-0.02em] text-[clamp(2rem,5.5vw,3.75rem)]">
+              A space to <span className="italic">glow.</span>
+            </h2>
           </div>
+          <span className="hidden sm:block font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+            Collection — 03
+          </span>
+        </Reveal>
+
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+          <Reveal variant="scale" className="sm:col-span-7">
+            <EdFigure
+              src={LANDING_GALLERY_PHOTOS[0].src}
+              alt={LANDING_GALLERY_PHOTOS[0].alt}
+              label={LANDING_GALLERY_PHOTOS[0].label}
+              fig="01"
+              aspect="aspect-[4/3]"
+              sizes="(max-width: 640px) 100vw, 58vw"
+            />
+          </Reveal>
+          <Reveal variant="scale" delay={120} className="sm:col-span-5">
+            <EdFigure
+              src={LANDING_GALLERY_PHOTOS[1].src}
+              alt={LANDING_GALLERY_PHOTOS[1].alt}
+              label={LANDING_GALLERY_PHOTOS[1].label}
+              fig="02"
+              aspect="aspect-[4/3]"
+              sizes="(max-width: 640px) 100vw, 42vw"
+            />
+          </Reveal>
+          <Reveal variant="scale" delay={200} className="sm:col-span-12">
+            <EdFigure
+              src={LANDING_GALLERY_PHOTOS[2].src}
+              alt={LANDING_GALLERY_PHOTOS[2].alt}
+              label={LANDING_GALLERY_PHOTOS[2].label}
+              fig="03"
+              aspect="aspect-[16/9] sm:aspect-[21/9]"
+              sizes="100vw"
+            />
+          </Reveal>
         </div>
       </section>
 
       {/* ── Roles ────────────────────────────────────────────────────────── */}
-      <section id="roles" className="py-28 px-5 sm:px-10 border-t border-border">
-        <div className="max-w-7xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Roles</p>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">Built for every role</h2>
-            <p className="text-base text-muted-foreground">One platform, three tailored experiences.</p>
-          </FadeIn>
+      <section id="roles" className="border-t border-border">
+        <div className={`${EDGE} py-20 sm:py-28`}>
+          <Reveal className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end mb-12 sm:mb-16">
+            <div className="lg:col-span-8">
+              <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-6">
+                <span className="text-foreground">(04)</span>&nbsp;&nbsp;—&nbsp;&nbsp;Access
+              </p>
+              <h2 className="font-serif tracking-[-0.02em] leading-[0.95] text-[clamp(2.25rem,6.5vw,4.75rem)]">
+                Built for <span className="italic">every</span> role.
+              </h2>
+            </div>
+            <p className="lg:col-span-4 text-sm text-muted-foreground leading-relaxed lg:pb-3">
+              One platform, three tailored experiences — admins, staff, and the clients they care for.
+            </p>
+          </Reveal>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-px bg-border border border-border md:grid-cols-3">
             {LANDING_ROLES.map((r, i) => (
-              <FadeIn key={r.role} delay={i * 100}>
-                <div
-                  className={`role-card rounded-2xl p-8 h-full flex flex-col gap-7 ${
-                    r.inverted
-                      ? "bg-foreground text-background"
-                      : "bg-card border border-border hover:border-foreground/25 hover:shadow-lg dark:hover:shadow-black/30"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center ${r.inverted ? "bg-background/10 border border-background/10" : "bg-muted border border-border"}`}
-                      >
-                        <r.icon
-                          className={`h-4 w-4 ${r.inverted ? "text-background" : "text-foreground"}`}
-                          strokeWidth={1.8}
-                        />
-                      </div>
-                      <span
-                        className={`text-xs font-bold uppercase tracking-widest ${r.inverted ? "text-background/50" : "text-muted-foreground"}`}
-                      >
-                        {r.role}
-                      </span>
-                    </div>
+              <Reveal key={r.role} delay={i * 100} className={r.inverted ? "bg-foreground text-background" : "bg-background"}>
+                <div className="h-full p-8 sm:p-10 flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`font-mono text-[11px] uppercase tracking-[0.25em] ${r.inverted ? "text-background/60" : "text-muted-foreground"}`}
+                    >
+                      0{i + 1}
+                    </span>
+                    <r.icon
+                      className={`h-5 w-5 ${r.inverted ? "text-background" : "text-foreground"}`}
+                      strokeWidth={1.5}
+                    />
                   </div>
-                  <ul className="space-y-4">
-                    {r.perks.map((p) => (
-                      <li key={p} className="flex items-start gap-3">
-                        <div
-                          className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${r.inverted ? "bg-background/10" : "bg-muted border border-border"}`}
-                        >
-                          <Check
-                            className={`h-3 w-3 ${r.inverted ? "text-background/60" : "text-muted-foreground"}`}
-                            strokeWidth={2.5}
-                          />
-                        </div>
-                        <span
-                          className={`text-[14px] leading-snug ${r.inverted ? "text-background/70" : "text-muted-foreground"}`}
-                        >
-                          {p}
-                        </span>
+                  <h3 className="font-serif text-4xl sm:text-5xl mt-10 mb-1 leading-none">{r.role}</h3>
+                  <span
+                    className={`font-mono text-[11px] uppercase tracking-[0.25em] ${r.inverted ? "text-background/50" : "text-muted-foreground"}`}
+                  >
+                    {r.role} access
+                  </span>
+                  <ul className="mt-8">
+                    {r.perks.map((p, j) => (
+                      <li
+                        key={p}
+                        className={`flex gap-4 py-3.5 text-sm border-t ${r.inverted ? "border-background/15 text-background/80" : "border-border text-muted-foreground"}`}
+                      >
+                        <span className="font-mono text-[11px] pt-0.5 opacity-60 tabular-nums">0{j + 1}</span>
+                        <span className="leading-snug">{p}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-              </FadeIn>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section className="py-20 px-5 sm:px-10 border-t border-border">
-        <FadeIn>
-          <div className="relative max-w-5xl mx-auto rounded-3xl overflow-hidden border border-border">
-            {/* Background photo */}
-            <div className="absolute inset-0">
-              <Image
-                src="https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1200&q=80&auto=format&fit=crop"
-                alt="Salon background"
-                fill
-                className="object-cover grayscale opacity-[0.07] dark:opacity-[0.12]"
-                sizes="(max-width: 1280px) 100vw, 1024px"
-              />
-            </div>
-            {/* Overlay card */}
-            <div className="relative bg-card/90 backdrop-blur-sm p-16 sm:p-24 text-center">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent" />
+      <section className="relative overflow-hidden border-t border-border">
+        <div aria-hidden className="absolute inset-0">
+          <Image
+            src="https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=1600&q=80&auto=format&fit=crop"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover grayscale opacity-[0.06] dark:opacity-[0.1]"
+          />
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none select-none absolute -top-[0.1em] right-2 font-serif italic text-foreground/[0.04] text-[30vw] leading-none"
+        >
+          glow
+        </div>
 
-              {/* Logo mark */}
-              <div className="flex justify-center mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-foreground flex items-center justify-center shadow-lg">
-                  <LogoIcon className="h-7 w-7 text-background" />
-                </div>
-              </div>
-
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-5">Get started today</p>
-              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.06] mb-5">
-                Ready to glow up
-                <br />
-                your business?
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto mb-10">
-                Join Glow By Miral and give your team and clients the seamless, modern experience they deserve.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                {isLoggedIn ? (
-                  <Link
-                    href={ROUTES.dashboard}
-                    className="group inline-flex items-center gap-2 text-[15px] font-semibold px-8 py-3.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-                  >
-                    Go to Dashboard{" "}
+        <div className={`relative ${EDGE} py-28 sm:py-40`}>
+          <Reveal className="max-w-4xl">
+            <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-muted-foreground mb-8">
+              <span className="text-foreground">(05)</span>&nbsp;&nbsp;—&nbsp;&nbsp;Begin
+            </p>
+            <h2 className="font-serif tracking-[-0.02em] leading-[0.9] text-[clamp(2.75rem,10vw,7.5rem)]">
+              Ready to glow up
+              <br />
+              your <span className="italic">business?</span>
+            </h2>
+            <p className="mt-8 text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
+              Give your team and clients the seamless, modern experience they deserve.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
+              {isLoggedIn ? (
+                <Link href={ROUTES.dashboard} className={BTN_PRIMARY}>
+                  Go to Dashboard
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              ) : (
+                <>
+                  <Link href={ROUTES.login} className={BTN_PRIMARY}>
+                    Get started
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
-                ) : (
-                  <>
-                    <Link
-                      href={ROUTES.login}
-                      className="group inline-flex items-center gap-2 text-[15px] font-semibold px-8 py-3.5 rounded-full bg-foreground text-background hover:opacity-85 transition-opacity"
-                    >
-                      Get started free{" "}
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                    <Link
-                      href={ROUTES.login}
-                      className="group inline-flex items-center gap-2 text-[15px] font-medium px-8 py-3.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
-                    >
-                      Sign in instead
-                    </Link>
-                  </>
-                )}
-              </div>
+                  <Link href={ROUTES.login} className={BTN_GHOST}>
+                    Sign in instead
+                  </Link>
+                </>
+              )}
             </div>
-          </div>
-        </FadeIn>
+          </Reveal>
+        </div>
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer className="py-12 px-5 sm:px-10 border-t border-border">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-10">
-            <div>
-              <LogoSidebar />
-              <p className="text-[13px] text-muted-foreground mt-3 max-w-xs leading-relaxed">
+      <footer className="border-t border-border">
+        <div className={`${EDGE} py-16`}>
+          <div className="grid gap-10 md:grid-cols-12">
+            <div className="md:col-span-6">
+              <div className="font-serif text-4xl">
+                Glow <span className="italic">By Miral</span>
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground max-w-xs leading-relaxed">
                 The complete management platform for modern salons and spas.
               </p>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-16 gap-y-6">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-                  Product
-                </p>
-                <ul className="space-y-3">
+            <div className="md:col-span-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-5">Product</p>
+              <ul className="space-y-3 text-sm">
+                <li>
+                  <Link href="#index" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Index
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#atelier" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Atelier
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#roles" className="text-muted-foreground hover:text-foreground transition-colors">
+                    Roles
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div className="md:col-span-3">
+              <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-5">Account</p>
+              <ul className="space-y-3 text-sm">
+                {isLoggedIn ? (
                   <li>
-                    <Link
-                      href="#features"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Features
+                    <Link href={ROUTES.dashboard} className="text-muted-foreground hover:text-foreground transition-colors">
+                      Dashboard
                     </Link>
                   </li>
+                ) : (
                   <li>
-                    <Link
-                      href="#how-it-works"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      How it works
+                    <Link href={ROUTES.login} className="text-muted-foreground hover:text-foreground transition-colors">
+                      Sign in
                     </Link>
                   </li>
-                  <li>
-                    <Link
-                      href="#roles"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Roles
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-                  Account
-                </p>
-                <ul className="space-y-3">
-                  {isLoggedIn ? (
-                    <li>
-                      <Link
-                        href={ROUTES.dashboard}
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Dashboard
-                      </Link>
-                    </li>
-                  ) : (
-                    <li>
-                      <Link
-                        href={ROUTES.login}
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Sign in
-                      </Link>
-                    </li>
-                  )}
-                  <li>
-                    <Link
-                      href={ROUTES.profile}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Profile
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+                )}
+                <li>
+                  <Link href={ROUTES.profile} className="text-muted-foreground hover:text-foreground transition-colors">
+                    Profile
+                  </Link>
+                </li>
+              </ul>
             </div>
           </div>
-          <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-[13px] text-muted-foreground">
-              © {new Date().getFullYear()} Glow By Miral. All rights reserved.
+          <div className="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              © {new Date().getFullYear()} Glow By Miral
             </p>
-            <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              <Layers className="h-3.5 w-3.5" />
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
               Built for modern beauty businesses
-            </div>
+            </p>
           </div>
         </div>
       </footer>
